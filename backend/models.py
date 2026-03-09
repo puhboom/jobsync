@@ -1,6 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_serializer
 from typing import Optional, List
-from datetime import date
+from datetime import date, datetime
 from enum import Enum
 
 
@@ -69,13 +69,17 @@ class Job(BaseModel):
     applied_date: Optional[date]
     notes: Optional[str]
     response_received: bool
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
     requirements: Optional[str] = None
     nice_to_have: Optional[str] = None
     responsibilities: Optional[str] = None
     keywords: Optional[str] = None
     credentials: Optional[str] = None
+
+    @field_serializer("created_at", "updated_at")
+    def serialize_datetime(self, dt: datetime, _info):
+        return dt.isoformat() if dt else None
 
     class Config:
         from_attributes = True
@@ -86,7 +90,11 @@ class ApplicationHistory(BaseModel):
     job_id: int
     status: str
     notes: Optional[str]
-    created_at: str
+    created_at: datetime
+
+    @field_serializer("created_at")
+    def serialize_datetime(self, dt: datetime, _info):
+        return dt.isoformat() if dt else None
 
     class Config:
         from_attributes = True
@@ -109,7 +117,11 @@ class BaseResume(BaseModel):
     id: int
     filename: str
     file_type: ResumeType
-    created_at: str
+    created_at: datetime
+
+    @field_serializer("created_at")
+    def serialize_datetime(self, dt: datetime, _info):
+        return dt.isoformat() if dt else None
 
     class Config:
         from_attributes = True
@@ -119,8 +131,12 @@ class GeneratedResume(BaseModel):
     id: int
     job_id: int
     content: str
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
+
+    @field_serializer("created_at", "updated_at")
+    def serialize_datetime(self, dt: datetime, _info):
+        return dt.isoformat() if dt else None
 
     class Config:
         from_attributes = True

@@ -168,18 +168,27 @@ async def parse_job_description(
             response.raise_for_status()
             parsed_data = response.json()
 
-            db_job.company = parsed_data.get("company", db_job.company)
-            db_job.position = parsed_data.get("position", db_job.position)
-            db_job.location = parsed_data.get("location", db_job.location)
-            db_job.salary = parsed_data.get("salary", db_job.salary)
-            remote_str = parsed_data.get("remote_type", "").lower()
+            if parsed_data.get("company"):
+                db_job.company = parsed_data.get("company")
+            if parsed_data.get("position"):
+                db_job.position = parsed_data.get("position")
+            if parsed_data.get("location"):
+                db_job.location = parsed_data.get("location")
+            if parsed_data.get("salary"):
+                db_job.salary = parsed_data.get("salary")
+            remote_str = (parsed_data.get("remote_type") or "").lower()
             if remote_str in ["remote", "hybrid", "on-site"]:
                 db_job.remote_type = remote_str
-            db_job.requirements = parsed_data.get("requirements")
-            db_job.nice_to_have = parsed_data.get("nice_to_have")
-            db_job.responsibilities = parsed_data.get("responsibilities")
-            db_job.keywords = parsed_data.get("keywords")
-            db_job.credentials = parsed_data.get("credentials")
+            if parsed_data.get("requirements"):
+                db_job.requirements = parsed_data.get("requirements")
+            if parsed_data.get("nice_to_have"):
+                db_job.nice_to_have = parsed_data.get("nice_to_have")
+            if parsed_data.get("responsibilities"):
+                db_job.responsibilities = parsed_data.get("responsibilities")
+            if parsed_data.get("keywords"):
+                db_job.keywords = parsed_data.get("keywords")
+            if parsed_data.get("credentials"):
+                db_job.credentials = parsed_data.get("credentials")
 
             db.commit()
             db.refresh(db_job)

@@ -62,6 +62,12 @@
                 <h5 class="mb-0">Parsed Job Info</h5>
             </div>
             <div class="card-body">
+                {% if job.responsibilities %}
+                <div class="mb-3">
+                    <strong>Responsibilities:</strong>
+                    <p>{{ job.responsibilities }}</p>
+                </div>
+                {% endif %}
                 {% if job.requirements %}
                 <div class="mb-3">
                     <strong>Requirements:</strong>
@@ -72,12 +78,6 @@
                 <div class="mb-3">
                     <strong>Nice to Have:</strong>
                     <p>{{ job.nice_to_have }}</p>
-                </div>
-                {% endif %}
-                {% if job.responsibilities %}
-                <div class="mb-3">
-                    <strong>Responsibilities:</strong>
-                    <p>{{ job.responsibilities }}</p>
                 </div>
                 {% endif %}
                 {% if job.keywords %}

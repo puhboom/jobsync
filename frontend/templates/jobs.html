@@ -35,8 +35,8 @@
         <tbody>
             {% for job in jobs %}
             <tr>
-                <td><a href="{{ url_for('job_detail', job_id=job.id) }}"><strong>{{ job.company }}</strong></a></td>
-                <td>{{ job.position }}</td>
+                <td><strong>{{ job.company }}</strong></td>
+                <td>{% if job.url %}<a href="{{ job.url }}" target="_blank">{{ job.position }}</a>{% else %}{{ job.position }}{% endif %}</td>
                 <td><span class="badge bg-{{ job.status | status_color }}">{{ job.status | status_display }}</span></td>
                 <td>{{ job.location or '-' }}</td>
                 <td><span class="badge bg-light text-dark">{{ job.remote_type | remote_display }}</span></td>
