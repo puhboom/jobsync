@@ -8,7 +8,11 @@ from pydantic import BaseModel
 
 app = FastAPI(title="JobSync AI Service", version="1.0.0")
 
-OLLAMA_HOST = os.getenv("OLLAMA_HOST", "host.docker.internal:11434")
+OLLAMA_HOST = (
+    os.getenv("OLLAMA_HOST", "http://localhost:11434")
+    .replace("http://", "")
+    .replace("https://", "")
+)
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2")
 
 

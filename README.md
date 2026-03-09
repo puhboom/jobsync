@@ -31,10 +31,13 @@ JobSync is a comprehensive job application tracking system with AI-powered resum
 ### Running the Application
 
 1. Clone the repository
-2. Create environment file:
+
+2. Create environment file from the example and configure values:
    ```bash
    cp .env.example .env
    ```
+   
+   Edit `.env` and update the values for your environment.
 
 3. Start all services:
    ```bash
@@ -45,18 +48,6 @@ JobSync is a comprehensive job application tracking system with AI-powered resum
    - Frontend: http://localhost:5000
    - Backend API: http://localhost:8000
    - AI Service: http://localhost:8001
-
-### Environment Variables
-
-Create a `.env` file with:
-
-```
-DB_ROOT_PASSWORD=rootpassword
-DB_PASSWORD=jobsyncpass
-OLLAMA_HOST=host.docker.internal:11434
-OLLAMA_MODEL=llama3.2
-SECRET_KEY=your-secret-key-change-in-production
-```
 
 ## Usage
 
@@ -108,21 +99,24 @@ SECRET_KEY=your-secret-key-change-in-production
 ### Running Locally (without Docker)
 
 1. Start MariaDB
-2. Start backend:
+
+2. Copy `.env.example` to `.env` and configure for local development
+
+3. Start backend:
    ```bash
    cd backend
    pip install -r requirements.txt
    uvicorn main:app --reload --port 8000
    ```
 
-3. Start AI service:
+4. Start AI service:
    ```bash
    cd ai-service
    pip install -r requirements.txt
    uvicorn main:app --reload --port 8001
    ```
 
-4. Start frontend:
+5. Start frontend:
    ```bash
    cd frontend
    pip install -r requirements.txt

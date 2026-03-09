@@ -5,15 +5,15 @@ services:
     image: mariadb:10.11
     container_name: jobsync_db
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
-      MYSQL_DATABASE: jobsync
-      MYSQL_USER: jobsync
-      MYSQL_PASSWORD: ${DB_PASSWORD:-jobsyncpass}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DATABASE_NAME}
+      MYSQL_USER: ${DATABASE_USER}
+      MYSQL_PASSWORD: ${DATABASE_PASSWORD}
     volumes:
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
       - mariadb_data:/var/lib/mysql
     ports:
-      - "3306:3306"
+      - "${DATABASE_PORT:-3306}:3306"
     networks:
       - jobsync_network
     healthcheck:
@@ -28,7 +28,11 @@ services:
       dockerfile: Dockerfile
     container_name: jobsync_backend
     environment:
-      - DATABASE_URL=mysql+pymysql://jobsync:jobsyncpass@db:3306/jobsync
+      - DATABASE_SERVER=db
+      - DATABASE_PORT=3306
+      - DATABASE_NAME=${DATABASE_NAME}
+      - DATABASE_USER=${DATABASE_USER}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
       - AI_SERVICE_URL=http://ai-service:8001
       - CORS_ORIGINS=http://localhost:5000,http://frontend:5000
     ports:

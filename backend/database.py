@@ -22,9 +22,12 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.sql import func
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL", "mysql+pymysql://jobsync:jobsyncpass@db:3306/jobsync"
-)
+DATABASE_SERVER = os.getenv("DATABASE_SERVER", "db")
+DATABASE_PORT = os.getenv("DATABASE_PORT", "3306")
+DATABASE_NAME = os.getenv("DATABASE_NAME", "jobsync")
+DATABASE_USER = os.getenv("DATABASE_USER", "jobsync")
+DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD", "jobsyncpass")
+DATABASE_URL = f"mysql+pymysql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_SERVER}:{DATABASE_PORT}/{DATABASE_NAME}"
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_recycle=3600)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

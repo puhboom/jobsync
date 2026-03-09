@@ -5,7 +5,9 @@ import requests
 BACKEND_URL = os.getenv("BACKEND_URL", "http://backend:8000")
 
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
+app.secret_key = os.getenv(
+    "APPLICATION_SECRET_KEY", "dev-secret-key-change-in-production"
+)
 
 
 def get_backend_url(endpoint):
