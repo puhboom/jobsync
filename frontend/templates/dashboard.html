@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - JobSync{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Dashboard</h1>
+    <a href="{{ url_for('new_job') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-2"></i> Add New Job
+    </a>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card bg-primary text-white">
+            <div class="card-body">
+                <h5 class="card-title">Total Jobs</h5>
+                <h2>{{ stats.total_jobs }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card bg-info text-white">
+            <div class="card-body">
+                <h5 class="card-title">Active Applications</h5>
+                <h2>{{ stats.active_applications }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card bg-warning text-white">
+            <div class="card-body">
+                <h5 class="card-title">Interviews</h5>
+                <h2>{{ stats.interviews }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card bg-success text-white">
+            <div class="card-body">
+                <h5 class="card-title">Offers</h5>
+                <h2>{{ stats.offers }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <h3 class="mb-3">Active Applications</h3>
+        {% if active_jobs %}
+            {% for job in active_jobs %}
+            <div class="card job-card mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h5><a href="{{ url_for('job_detail', job_id=job.id) }}">{{ job.position }}</a></h5>
+                            <p class="mb-1"><strong>{{ job.company }}</strong></p>
+                            {% if job.location %}<small class="text-muted"><i class="bi bi-geo-alt"></i> {{ job.location }}</small>{% endif %}
+                        </div>
+                        <span class="badge bg-{{ job.status | status_color }}">{{ job.status | status_display }}</span>
+                    </div>
+                    {% if job.remote_type or job.salary %}
+                    <div class="mt-2">
+                        {% if job.remote_type %}<span class="badge bg-light text-dark me-1">{{ job.remote_type | remote_display }}</span>{% endif %}
+                        {% if job.salary %}<span class="badge bg-light text-dark">{{ job.salary }}</span>{% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="alert alert-info">No active applications.</div>
+        {% endif %}
+    </div>
+    
+    <div class="col-md-6">
+        <h3 class="mb-3">Archived Applications</h3>
+        {% if archived_jobs %}
+            {% for job in archived_jobs %}
+            <div class="card job-card mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h5><a href="{{ url_for('job_detail', job_id=job.id) }}">{{ job.position }}</a></h5>
+                            <p class="mb-1"><strong>{{ job.company }}</strong></p>
+                            {% if job.location %}<small class="text-muted"><i class="bi bi-geo-alt"></i> {{ job.location }}</small>{% endif %}
+                        </div>
+                        <span class="badge bg-{{ job.status | status_color }}">{{ job.status | status_display }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="alert alert-secondary">No archived applications.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

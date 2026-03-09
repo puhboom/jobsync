@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  db:
+    image: mariadb:10.11
+    container_name: jobsync_db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: jobsync
+      MYSQL_USER: jobsync
+      MYSQL_PASSWORD: ${DB_PASSWORD:-jobsyncpass}
+    volumes:
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - mariadb_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - jobsync_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: jobsync_backend
+    environment:
+      - DATABASE_URL=mysql+pymysql://jobsync:jobsyncpass@db:3306/jobsync
+      - AI_SERVICE_URL=http://ai-service:8001
+      - CORS_ORIGINS=http://localhost:5000,http://frontend:5000
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      ai-service:
+        condition: service_started
+    networks:
+      - jobsync_network
+    volumes:
+      - ./backend:/app
+    restart: on-failure
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: jobsync_frontend
+    environment:
+      - BACKEND_URL=http://backend:8000
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+    ports:
+      - "5000:5000"
+    depends_on:
+      - backend
+    networks:
+      - jobsync_network
+    volumes:
+      - ./frontend:/app
+    restart: on-failure
+
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: jobsync_ai
+    environment:
+      - OLLAMA_HOST=${OLLAMA_HOST:-host.docker.internal:11434}
+    ports:
+      - "8001:8001"
+    networks:
+      - jobsync_network
+    volumes:
+      - ./ai-service:/app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  jobsync_network:
+    driver: bridge
+
+volumes:
+  mariadb_data:

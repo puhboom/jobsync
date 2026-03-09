@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Edit Resume - JobSync{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Edit Generated Resume</h1>
+    <div>
+        <a href="{{ url_for('export_resume', resume_id=resume.id) }}" class="btn btn-success">Export DOCX</a>
+        <a href="{{ url_for('job_detail', job_id=resume.job_id) }}" class="btn btn-secondary">Back to Job</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            <div class="mb-3">
+                <label class="form-label">Resume Content</label>
+                <textarea class="form-control" name="content" rows="20" style="font-family: monospace; font-size: 0.9rem;">{{ resume.content }}</textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+        </form>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">Resume Information</h5>
+    </div>
+    <div class="card-body">
+        <p><strong>Created:</strong> {{ resume.created_at[:19].replace('T', ' ') }}</p>
+        <p><strong>Updated:</strong> {{ resume.updated_at[:19].replace('T', ' ') }}</p>
+    </div>
+</div>
+{% endblock %}
