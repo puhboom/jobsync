@@ -59,6 +59,7 @@ class JobUpdate(BaseModel):
 
 class Job(BaseModel):
     id: int
+    user_id: Optional[int]
     company: str
     position: str
     status: JobStatus
@@ -115,6 +116,7 @@ class BaseResumeCreate(BaseModel):
 
 class BaseResume(BaseModel):
     id: int
+    user_id: Optional[int]
     filename: str
     file_type: ResumeType
     created_at: datetime
@@ -185,3 +187,43 @@ class ResumeGenerateRequest(BaseModel):
     job_id: int
     example_resume_id: Optional[int] = None
     template_resume_id: Optional[int] = None
+
+
+class OAuthProvider(str, Enum):
+    google = "google"
+    linkedin = "linkedin"
+
+
+class OAuthLinkInfo(BaseModel):
+    provider: OAuthProvider
+    connected: bool
+
+    class Config:
+        from_attributes = True
+
+
+class UserResponse(BaseModel):
+    id: int
+    email: str
+    name: Optional[str]
+    picture: Optional[str]
+    created_at: datetime
+    oauth_links: List[OAuthLinkInfo] = []
+
+    @field_serializer("created_at")
+    def serialize_datetime(self, dt: datetime, _info):
+        return dt.isoformat() if dt else None
+
+    class Config:
+        from_attributes = True
+
+
+class UserWithLinks(BaseModel):
+    id: int
+    email: str
+    name: Optional[str]
+    picture: Optional[str]
+    oauth_providers: List[str] = []
+
+    class Config:
+        from_attributes = True

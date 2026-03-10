@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from pydantic import BaseModel
 
 import httpx
 
@@ -22,6 +23,8 @@ from database import (
     GeneratedResume,
     ATSAnalysis,
     TechFitAnalysis,
+    User,
+    OAuthLink,
 )
 from models import (
     JobCreate,
@@ -39,6 +42,10 @@ from models import (
     ApplicationHistory as ApplicationHistoryModel,
     DashboardStats,
     ResumeGenerateRequest,
+    UserResponse,
+    UserWithLinks,
+    OAuthLinkInfo,
+    OAuthProvider,
 )
 
 AI_SERVICE_URL = os.getenv("AI_SERVICE_URL", "http://ai-service:8001")

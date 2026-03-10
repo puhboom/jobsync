@@ -17,6 +17,7 @@ from sqlalchemy import (
     DECIMAL,
     Date,
     LargeBinary,
+    UniqueConstraint,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
@@ -38,6 +39,7 @@ class Job(Base):
     __tablename__ = "jobs"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
     company = Column(String(255), nullable=False)
     position = Column(String(255), nullable=False)
     status = Column(
@@ -77,6 +79,7 @@ class Job(Base):
     generated_resumes = relationship(
         "GeneratedResume", back_populates="job", cascade="all, delete-orphan"
     )
+    user = relationship("User", back_populates="jobs")
 
 
 class ApplicationHistory(Base):
@@ -95,6 +98,7 @@ class BaseResume(Base):
     __tablename__ = "base_resumes"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
     filename = Column(String(255), nullable=False)
     content = Column(LargeBinary, nullable=True)
     content_type = Column(String(100), nullable=True)
@@ -102,6 +106,8 @@ class BaseResume(Base):
     text_content = Column(Text, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User", back_populates="base_resumes")
 
 
 class GeneratedResume(Base):
@@ -150,6 +156,47 @@ class TechFitAnalysis(Base):
     gaps = Column(Text, nullable=True)
     recommendations = Column(Text, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    name = Column(String(255), nullable=True)
+    picture = Column(String(500), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    oauth_links = relationship(
+        "OAuthLink", back_populates="user", cascade="all, delete-orphan"
+    )
+    jobs = relationship("Job", back_populates="user", cascade="all, delete-orphan")
+    base_resumes = relationship(
+        "BaseResume", back_populates="user", cascade="all, delete-orphan"
+    )
+
+
+class OAuthLink(Base):
+    __tablename__ = "oauth_links"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    provider = Column(String(50), nullable=False)
+    provider_user_id = Column(String(255), nullable=False)
+    access_token = Column(Text, nullable=True)
+    refresh_token = Column(Text, nullable=True)
+    token_expires_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User", back_populates="oauth_links")
+
+    __table_args__ = (
+        UniqueConstraint("provider", "provider_user_id", name="uq_provider_user"),
+    )
 
 
 def get_db():
