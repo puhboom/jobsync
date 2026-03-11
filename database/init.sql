@@ -1,7 +1,31 @@
 -- JobSync Database Schema
 
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    name VARCHAR(255),
+    picture TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS oauth_links (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    provider VARCHAR(50) NOT NULL,
+    provider_user_id VARCHAR(255) NOT NULL,
+    access_token TEXT,
+    refresh_token TEXT,
+    token_expires_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_provider_user (provider, provider_user_id)
+);
+
 CREATE TABLE IF NOT EXISTS jobs (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
     company VARCHAR(255) NOT NULL,
     position VARCHAR(255) NOT NULL,
     status ENUM('saved', 'applied', 'phone_screen', 'interview', 'executive_call', 'offered', 'rejected', 'withdrawn', 'closed') DEFAULT 'saved',
@@ -21,7 +45,8 @@ CREATE TABLE IF NOT EXISTS jobs (
     nice_to_have TEXT,
     responsibilities TEXT,
     keywords TEXT,
-    credentials TEXT
+    credentials TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS application_history (
@@ -35,13 +60,15 @@ CREATE TABLE IF NOT EXISTS application_history (
 
 CREATE TABLE IF NOT EXISTS base_resumes (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
     filename VARCHAR(255) NOT NULL,
     content LONGBLOB,
     content_type VARCHAR(100),
     file_type ENUM('example', 'template') NOT NULL,
     text_content LONGTEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS generated_resumes (
@@ -89,5 +116,7 @@ CREATE TABLE IF NOT EXISTS tech_fit_analysis (
 CREATE INDEX idx_jobs_status ON jobs(status);
 CREATE INDEX idx_jobs_company ON jobs(company);
 CREATE INDEX idx_jobs_applied_date ON jobs(applied_date);
+CREATE INDEX idx_jobs_user_id ON jobs(user_id);
+CREATE INDEX idx_oauth_links_user_id ON oauth_links(user_id);
 CREATE INDEX idx_application_history_job_id ON application_history(job_id);
 CREATE INDEX idx_application_history_created ON application_history(created_at);

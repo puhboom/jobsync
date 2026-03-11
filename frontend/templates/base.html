@@ -73,6 +73,9 @@
                     <a class="nav-link {{ 'active' if request.endpoint == 'resumes' else '' }}" href="{{ url_for('resumes') }}">
                         <i class="bi bi-file-earmark-text me-2"></i> Resumes
                     </a>
+                    <a class="nav-link {{ 'active' if request.endpoint == 'account' else '' }}" href="{{ url_for('account') }}">
+                        <i class="bi bi-person-circle me-2"></i> Account
+                    </a>
                 </nav>
             </div>
             <div class="col-md-10 main-content">

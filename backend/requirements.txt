@@ -8,3 +8,4 @@ aiohttp==3.9.3
 python-docx==0.8.11
 PyPDF2==3.0.1
 httpx==0.25.2
+requests==2.31.0

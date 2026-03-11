@@ -1,8 +1,22 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from dotenv import load_dotenv
+
+load_dotenv()
+
+from flask import (
+    Flask,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    flash,
+    jsonify,
+    session,
+)
 import requests
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://backend:8000")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5000")
 
 app = Flask(__name__)
 app.secret_key = os.getenv(
@@ -14,17 +28,20 @@ def get_backend_url(endpoint):
     return f"{BACKEND_URL}{endpoint}"
 
 
-def call_backend(method, endpoint, data=None, params=None):
+def call_backend(method, endpoint, data=None, params=None, use_auth=False):
     url = get_backend_url(endpoint)
+    headers = {}
+    if use_auth and session.get("auth_token"):
+        headers["Authorization"] = f"Bearer {session.get('auth_token')}"
     try:
         if method == "GET":
-            response = requests.get(url, params=params, timeout=30)
+            response = requests.get(url, params=params, headers=headers, timeout=30)
         elif method == "POST":
-            response = requests.post(url, json=data, timeout=120)
+            response = requests.post(url, json=data, headers=headers, timeout=120)
         elif method == "PUT":
-            response = requests.put(url, json=data, timeout=30)
+            response = requests.put(url, json=data, headers=headers, timeout=30)
         elif method == "DELETE":
-            response = requests.delete(url, timeout=30)
+            response = requests.delete(url, headers=headers, timeout=30)
         else:
             return None
 
@@ -35,13 +52,41 @@ def call_backend(method, endpoint, data=None, params=None):
         return None
 
 
+def get_current_user():
+    token = session.get("auth_token")
+    if not token:
+        return None
+    user = call_backend("GET", f"/api/auth/me?token={token}")
+    return user
+
+
+def require_auth(f):
+    from functools import wraps
+
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get("auth_token"):
+            flash("Please log in to access this page.", "error")
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
 @app.route("/")
 def index():
+    if not session.get("auth_token"):
+        return redirect(url_for("login"))
     return redirect(url_for("dashboard"))
 
 
 @app.route("/dashboard")
+@require_auth
 def dashboard():
+    user = get_current_user()
+    if not user:
+        return redirect(url_for("login"))
+
     stats = call_backend("GET", "/api/dashboard/stats")
     if stats is None:
         stats = {
@@ -76,6 +121,7 @@ def dashboard():
 
 
 @app.route("/jobs")
+@require_auth
 def jobs():
     status_filter = request.args.get("status", None)
     params = {}
@@ -90,6 +136,7 @@ def jobs():
 
 
 @app.route("/jobs/new", methods=["GET", "POST"])
+@require_auth
 def new_job():
     if request.method == "POST":
         data = {
@@ -125,6 +172,7 @@ def new_job():
 
 
 @app.route("/jobs/<int:job_id>")
+@require_auth
 def job_detail(job_id):
     job = call_backend("GET", f"/api/jobs/{job_id}")
     if job is None:
@@ -158,6 +206,7 @@ def job_detail(job_id):
 
 
 @app.route("/jobs/<int:job_id>/edit", methods=["GET", "POST"])
+@require_auth
 def edit_job(job_id):
     job = call_backend("GET", f"/api/jobs/{job_id}")
     if job is None:
@@ -195,6 +244,7 @@ def edit_job(job_id):
 
 
 @app.route("/jobs/<int:job_id>/delete", methods=["POST"])
+@require_auth
 def delete_job(job_id):
     result = call_backend("DELETE", f"/api/jobs/{job_id}")
     if result:
@@ -205,6 +255,7 @@ def delete_job(job_id):
 
 
 @app.route("/jobs/<int:job_id>/parse", methods=["POST"])
+@require_auth
 def parse_description(job_id):
     description = request.form.get("description", "")
     result = call_backend(
@@ -222,6 +273,7 @@ def parse_description(job_id):
 
 
 @app.route("/jobs/<int:job_id>/history", methods=["POST"])
+@require_auth
 def add_history(job_id):
     data = {
         "status": request.form.get("status"),
@@ -239,6 +291,7 @@ def add_history(job_id):
 
 
 @app.route("/resumes")
+@require_auth
 def resumes():
     base_resumes = call_backend("GET", "/api/resumes")
     if base_resumes is None:
@@ -251,6 +304,7 @@ def resumes():
 
 
 @app.route("/resumes/upload", methods=["POST"])
+@require_auth
 def upload_resume():
     file_type = request.form.get("file_type")
 
@@ -280,6 +334,7 @@ def upload_resume():
 
 
 @app.route("/resumes/<int:resume_id>/delete", methods=["POST"])
+@require_auth
 def delete_resume(resume_id):
     result = call_backend("DELETE", f"/api/resumes/{resume_id}")
     if result:
@@ -290,6 +345,7 @@ def delete_resume(resume_id):
 
 
 @app.route("/jobs/<int:job_id>/generate-resume", methods=["POST"])
+@require_auth
 def generate_resume(job_id):
     example_resume_id = request.form.get("example_resume_id") or None
     template_resume_id = request.form.get("template_resume_id") or None
@@ -311,6 +367,7 @@ def generate_resume(job_id):
 
 
 @app.route("/generated-resumes/<int:resume_id>/edit", methods=["GET", "POST"])
+@require_auth
 def edit_generated_resume(resume_id):
     resume = call_backend("GET", f"/api/generated-resumes/{resume_id}")
     if resume is None:
@@ -333,6 +390,7 @@ def edit_generated_resume(resume_id):
 
 
 @app.route("/generated-resumes/<int:resume_id>/export")
+@require_auth
 def export_resume(resume_id):
     try:
         response = requests.get(
@@ -357,6 +415,7 @@ def export_resume(resume_id):
 
 
 @app.route("/jobs/<int:job_id>/analyze-ats", methods=["POST"])
+@require_auth
 def analyze_ats(job_id):
     resume_id = request.form.get("resume_id") or None
     data = {}
@@ -374,6 +433,7 @@ def analyze_ats(job_id):
 
 
 @app.route("/jobs/<int:job_id>/analyze-tech-fit", methods=["POST"])
+@require_auth
 def analyze_tech_fit(job_id):
     resume_id = request.form.get("resume_id") or None
     data = {}
@@ -430,6 +490,112 @@ def status_color_filter(status):
 @app.template_filter("remote_display")
 def remote_display_filter(remote):
     return REMOTE_DISPLAY.get(remote, remote)
+
+
+@app.route("/login")
+def login():
+    user = get_current_user()
+    if user:
+        return redirect(url_for("dashboard"))
+
+    google_oauth_url = ""
+    linkedin_oauth_url = ""
+
+    google_client_id = os.getenv("GOOGLE_CLIENT_ID", "")
+    linkedin_client_id = os.getenv("LINKEDIN_CLIENT_ID", "")
+    redirect_uri = f"{FRONTEND_URL}/oauth"
+
+    if google_client_id:
+        scope = "openid email profile"
+        google_oauth_url = f"https://accounts.google.com/o/oauth2/v2/auth?client_id={google_client_id}&redirect_uri={redirect_uri}/google&response_type=code&scope={scope}&access_type=offline"
+
+    if linkedin_client_id:
+        scope = "openid email profile"
+        linkedin_oauth_url = f"https://www.linkedin.com/oauth/v2/authorization?client_id={linkedin_client_id}&redirect_uri={redirect_uri}/linkedin&response_type=code&scope={scope}"
+
+    return render_template(
+        "login.html",
+        google_oauth_url=google_oauth_url,
+        linkedin_oauth_url=linkedin_oauth_url,
+        GOOGLE_CLIENT_ID=google_client_id,
+        LINKEDIN_CLIENT_ID=linkedin_client_id,
+    )
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    flash("You have been logged out.", "info")
+    return redirect(url_for("login"))
+
+
+@app.route("/oauth/<provider>")
+def oauth_callback(provider):
+    code = request.args.get("code")
+    if not code:
+        flash("Authorization failed: No code provided.", "error")
+        return redirect(url_for("login"))
+
+    token = session.get("auth_token")
+    if token:
+        callback_data = {"provider": provider, "code": f"{token}||{code}"}
+        result = call_backend("POST", "/api/auth/link-oauth", data=callback_data)
+    else:
+        callback_data = {"provider": provider, "code": code}
+        result = call_backend("POST", "/api/auth/oauth-callback", data=callback_data)
+
+    if result and result.get("token"):
+        session["auth_token"] = result["token"]
+        session["user"] = result.get("user")
+        flash("Successfully logged in!", "success")
+        return redirect(url_for("dashboard"))
+    else:
+        flash("Login failed. Please try again.", "error")
+        return redirect(url_for("login"))
+
+
+@app.route("/link-oauth/<provider>")
+def link_oauth(provider):
+    if not session.get("auth_token"):
+        flash("You must be logged in to link accounts.", "error")
+        return redirect(url_for("login"))
+
+    client_id = ""
+    redirect_uri = ""
+
+    if provider == "google":
+        client_id = os.getenv("GOOGLE_CLIENT_ID", "")
+        redirect_uri = f"{FRONTEND_URL}/oauth/google"
+        scope = "openid email profile"
+    elif provider == "linkedin":
+        client_id = os.getenv("LINKEDIN_CLIENT_ID", "")
+        redirect_uri = f"{FRONTEND_URL}/oauth/linkedin"
+        scope = "openid email profile"
+    else:
+        flash("Invalid provider.", "error")
+        return redirect(url_for("dashboard"))
+
+    if not client_id:
+        flash("OAuth not configured. Please contact administrator.", "error")
+        return redirect(url_for("dashboard"))
+
+    auth_url = ""
+    if provider == "google":
+        auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?client_id={client_id}&redirect_uri={redirect_uri}&response_type=code&scope={scope}&access_type=offline"
+    elif provider == "linkedin":
+        auth_url = f"https://www.linkedin.com/oauth/v2/authorization?client_id={client_id}&redirect_uri={redirect_uri}&response_type=code&scope={scope}"
+
+    return redirect(auth_url)
+
+
+@app.route("/account")
+@require_auth
+def account():
+    user = get_current_user()
+    if not user:
+        flash("Please log in to view your account.", "error")
+        return redirect(url_for("login"))
+    return render_template("account.html", user=user)
 
 
 if __name__ == "__main__":

@@ -620,6 +620,307 @@ def get_tech_fit_analyses(job_id: int, db: Session = Depends(get_db)):
     ]
 
 
+class OAuthCallback(BaseModel):
+    provider: str
+    code: str
+
+
+@app.post("/api/auth/oauth-callback")
+def oauth_callback(callback: OAuthCallback, db: Session = Depends(get_db)):
+    provider = callback.provider
+    code = callback.code
+
+    token_url = ""
+    client_id = ""
+    client_secret = ""
+    scope = ""
+
+    if provider == "google":
+        token_url = "https://oauth2.googleapis.com/token"
+        client_id = os.getenv("GOOGLE_CLIENT_ID", "")
+        client_secret = os.getenv("GOOGLE_CLIENT_SECRET", "")
+        scope = "openid email profile"
+    elif provider == "linkedin":
+        token_url = "https://www.linkedin.com/oauth/v2/accessToken"
+        client_id = os.getenv("LINKEDIN_CLIENT_ID", "")
+        client_secret = os.getenv("LINKEDIN_CLIENT_SECRET", "")
+        scope = "openid email profile"
+    else:
+        raise HTTPException(status_code=400, detail="Invalid provider")
+
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5000")
+
+    redirect_uri = f"{frontend_url}/oauth/{provider}"
+
+    import requests
+
+    token_data = {
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "code": code,
+        "redirect_uri": redirect_uri,
+        "grant_type": "authorization_code",
+    }
+
+    try:
+        token_response = requests.post(token_url, data=token_data, timeout=30)
+        token_response.raise_for_status()
+        tokens = token_response.json()
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail=f"Failed to exchange code for token: {str(e)}"
+        )
+
+    access_token = tokens.get("access_token")
+
+    user_info_url = ""
+    if provider == "google":
+        user_info_url = "https://www.googleapis.com/oauth2/v2/userinfo"
+    elif provider == "linkedin":
+        user_info_url = "https://api.linkedin.com/v2/userinfo"
+
+    headers = {"Authorization": f"Bearer {access_token}"}
+    try:
+        user_response = requests.get(user_info_url, headers=headers, timeout=30)
+        user_response.raise_for_status()
+        user_info = user_response.json()
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail=f"Failed to get user info: {str(e)}"
+        )
+
+    if provider == "google":
+        provider_user_id = user_info.get("id")
+        email = user_info.get("email")
+        name = user_info.get("name")
+        picture = user_info.get("picture")
+    elif provider == "linkedin":
+        provider_user_id = user_info.get("sub")
+        email = user_info.get("email")
+        name = user_info.get("name")
+        picture = None
+
+    existing_link = (
+        db.query(OAuthLink)
+        .filter(
+            OAuthLink.provider == provider,
+            OAuthLink.provider_user_id == provider_user_id,
+        )
+        .first()
+    )
+
+    if existing_link:
+        user = existing_link.user
+        existing_link.access_token = access_token
+        existing_link.refresh_token = tokens.get("refresh_token")
+        if "expires_in" in tokens:
+            from datetime import timedelta
+
+            existing_link.token_expires_at = datetime.utcnow() + timedelta(
+                seconds=tokens["expires_in"]
+            )
+        db.commit()
+    else:
+        existing_user = db.query(User).filter(User.email == email).first()
+
+        if existing_user:
+            user = existing_user
+        else:
+            user = User(email=email, name=name, picture=picture)
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+
+        oauth_link = OAuthLink(
+            user_id=user.id,
+            provider=provider,
+            provider_user_id=provider_user_id,
+            access_token=access_token,
+            refresh_token=tokens.get("refresh_token"),
+        )
+        if "expires_in" in tokens:
+            from datetime import timedelta
+
+            oauth_link.token_expires_at = datetime.utcnow() + timedelta(
+                seconds=tokens["expires_in"]
+            )
+        db.add(oauth_link)
+        db.commit()
+
+    session_token = f"{provider}_{user.id}_{user.email}"
+
+    return {
+        "token": session_token,
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "picture": user.picture,
+        },
+    }
+
+
+@app.get("/api/auth/me", response_model=UserWithLinks)
+def get_current_user(
+    provider: Optional[str] = None,
+    token: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    try:
+        parts = token.split("_")
+        if len(parts) < 3:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        provider_name = parts[0]
+        user_id = int(parts[1])
+    except (ValueError, IndexError):
+        raise HTTPException(status_code=401, detail="Invalid token format")
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    oauth_providers = [link.provider for link in user.oauth_links]
+
+    return UserWithLinks(
+        id=user.id,
+        email=user.email,
+        name=user.name,
+        picture=user.picture,
+        oauth_providers=oauth_providers,
+    )
+
+
+@app.post("/api/auth/link-oauth")
+def link_oauth(callback: OAuthCallback, db: Session = Depends(get_db)):
+    token = callback.code.split("||")[0] if "||" in callback.code else None
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    try:
+        parts = token.split("_")
+        user_id = int(parts[1])
+    except (ValueError, IndexError):
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    provider = callback.provider
+    code = callback.code.split("||")[1] if "||" in callback.code else callback.code
+
+    token_url = ""
+    client_id = ""
+    client_secret = ""
+
+    if provider == "google":
+        token_url = "https://oauth2.googleapis.com/token"
+        client_id = os.getenv("GOOGLE_CLIENT_ID", "")
+        client_secret = os.getenv("GOOGLE_CLIENT_SECRET", "")
+    elif provider == "linkedin":
+        token_url = "https://www.linkedin.com/oauth/v2/accessToken"
+        client_id = os.getenv("LINKEDIN_CLIENT_ID", "")
+        client_secret = os.getenv("LINKEDIN_CLIENT_SECRET", "")
+    else:
+        raise HTTPException(status_code=400, detail="Invalid provider")
+
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5000")
+    redirect_uri = f"{frontend_url}/oauth/{provider}"
+
+    import requests
+
+    token_data = {
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "code": code,
+        "redirect_uri": redirect_uri,
+        "grant_type": "authorization_code",
+    }
+
+    try:
+        token_response = requests.post(token_url, data=token_data, timeout=30)
+        token_response.raise_for_status()
+        tokens = token_response.json()
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail=f"Failed to exchange code: {str(e)}"
+        )
+
+    access_token = tokens.get("access_token")
+
+    user_info_url = ""
+    if provider == "google":
+        user_info_url = "https://www.googleapis.com/oauth2/v2/userinfo"
+    elif provider == "linkedin":
+        user_info_url = "https://api.linkedin.com/v2/userinfo"
+
+    headers = {"Authorization": f"Bearer {access_token}"}
+    try:
+        user_response = requests.get(user_info_url, headers=headers, timeout=30)
+        user_response.raise_for_status()
+        user_info = user_response.json()
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail=f"Failed to get user info: {str(e)}"
+        )
+
+    if provider == "google":
+        provider_user_id = user_info.get("id")
+    elif provider == "linkedin":
+        provider_user_id = user_info.get("sub")
+
+    existing_link = (
+        db.query(OAuthLink)
+        .filter(
+            OAuthLink.provider == provider,
+            OAuthLink.provider_user_id == provider_user_id,
+        )
+        .first()
+    )
+
+    if existing_link:
+        raise HTTPException(
+            status_code=400, detail="This account is already linked to another user"
+        )
+
+    oauth_link = OAuthLink(
+        user_id=user.id,
+        provider=provider,
+        provider_user_id=provider_user_id,
+        access_token=access_token,
+        refresh_token=tokens.get("refresh_token"),
+    )
+    if "expires_in" in tokens:
+        from datetime import timedelta
+
+        oauth_link.token_expires_at = datetime.utcnow() + timedelta(
+            seconds=tokens["expires_in"]
+        )
+
+    db.add(oauth_link)
+    db.commit()
+
+    oauth_providers = [link.provider for link in user.oauth_links]
+
+    return {
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "picture": user.picture,
+            "oauth_providers": oauth_providers,
+        }
+    }
+
+
+@app.post("/api/auth/logout")
+def logout():
+    return {"message": "Logged out"}
+
+
 if __name__ == "__main__":
     import uvicorn
 
