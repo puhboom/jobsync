@@ -195,6 +195,13 @@ def job_detail(job_id):
     if tech_fit_analyses is None:
         tech_fit_analyses = []
 
+    base_resumes = call_backend("GET", "/api/resumes")
+    if base_resumes is None:
+        base_resumes = []
+
+    example_resumes = [r for r in base_resumes if r.get("file_type") == "example"]
+    template_resumes = [r for r in base_resumes if r.get("file_type") == "template"]
+
     return render_template(
         "job_detail.html",
         job=job,
@@ -202,6 +209,8 @@ def job_detail(job_id):
         generated_resumes=generated_resumes,
         ats_analyses=ats_analyses,
         tech_fit_analyses=tech_fit_analyses,
+        example_resumes=example_resumes,
+        template_resumes=template_resumes,
     )
 
 
@@ -595,7 +604,51 @@ def account():
     if not user:
         flash("Please log in to view your account.", "error")
         return redirect(url_for("login"))
-    return render_template("account.html", user=user)
+
+    base_resumes = call_backend("GET", "/api/resumes")
+    if base_resumes is None:
+        base_resumes = []
+
+    examples = [r for r in base_resumes if r.get("file_type") == "example"]
+    templates = [r for r in base_resumes if r.get("file_type") == "template"]
+
+    return render_template(
+        "account.html", user=user, examples=examples, templates=templates
+    )
+
+
+@app.route("/account/upload-picture", methods=["POST"])
+@require_auth
+def upload_profile_picture():
+    if "picture" not in request.files:
+        flash("No file provided.", "error")
+        return redirect(url_for("account"))
+
+    file = request.files["picture"]
+
+    if file.filename == "":
+        flash("No file selected.", "error")
+        return redirect(url_for("account"))
+
+    token = session.get("auth_token")
+    files = {"file": (file.filename, file.read(), file.content_type)}
+    data = {"token": token}
+
+    try:
+        response = requests.post(
+            get_backend_url("/api/auth/upload-picture"),
+            files=files,
+            data=data,
+            timeout=30,
+        )
+        response.raise_for_status()
+        result = response.json()
+        session["user"] = result
+        flash("Profile picture updated successfully!", "success")
+    except requests.exceptions.RequestException:
+        flash("Failed to upload profile picture.", "error")
+
+    return redirect(url_for("account"))
 
 
 if __name__ == "__main__":

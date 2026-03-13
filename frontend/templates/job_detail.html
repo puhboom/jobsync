@@ -198,13 +198,19 @@
                 <div class="col-md-6 mb-2">
                     <label class="form-label">Example Resume (Optional)</label>
                     <select class="form-select" name="example_resume_id">
-                        <option value="">Select...</option>
+                        <option value="">None</option>
+                        {% for resume in example_resumes %}
+                        <option value="{{ resume.id }}">{{ resume.filename }}</option>
+                        {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-6 mb-2">
                     <label class="form-label">Template (Optional)</label>
                     <select class="form-select" name="template_resume_id">
-                        <option value="">Select...</option>
+                        <option value="">None</option>
+                        {% for resume in template_resumes %}
+                        <option value="{{ resume.id }}">{{ resume.filename }}</option>
+                        {% endfor %}
                     </select>
                 </div>
             </div>

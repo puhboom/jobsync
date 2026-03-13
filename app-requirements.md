@@ -4,11 +4,12 @@
 JobSync is a job application tracking system with AI-powered resume generation and job description parsing.
 
 ## User Authentication
-**Status: NOT IMPLEMENTED**
-- Single-user application (no authentication system)
-- No user signup/login
-- No LinkedIn or Google OAuth integration
-- No password reset capability
+- Signup with Google or LinkedIn OAuth
+- Google OAuth integration (working)
+- LinkedIn OAuth integration (working)
+- No password-based authentication (by design)
+- No password reset capability (by design - no password system)
+- Session-based authentication with Flask
 
 ## Job Management
 
@@ -16,7 +17,7 @@ JobSync is a job application tracking system with AI-powered resume generation a
 - Paste plain text job descriptions
 - AI automatically parses job details (company, position, location, salary, remote type)
 - Extracts requirements (must-have/nice-to-have), responsibilities, keywords, and credentials
-- URL support: URL can be stored for reference but is NOT auto-fetched
+- URL support: URL can be stored for reference but is NOT auto-fetched (not implemented)
 
 ### Job Tracker Fields
 - Company name
@@ -89,20 +90,35 @@ JobSync is a job application tracking system with AI-powered resume generation a
 - Filter tabs: All, Active, Interviewing, Offers, Archived
 - Two-column layout: Active and Archived applications
 - Quick action buttons on job cards
+- Job cards with position, company, location, status badge, remote type badge, salary badge
 
 ## Technical Architecture
-- **Backend**: FastAPI (Python)
-- **Database**: MariaDB
-- **Frontend**: Flask (Python)
-- **AI**: Ollama local LLM integration
-- **File Storage**: Base64 encoded in database
+- **Backend API**: FastAPI (Python) on port 8000
+- **Database**: MariaDB 10.11
+- **Frontend Web UI**: Flask (Python) on port 5005
+- **AI Service**: FastAPI + Ollama local LLM integration on port 8001
+- **File Storage**: Base64 encoded in database (LONGBLOB)
 - **Deployment**: Docker Compose with separate containers for frontend, database, backend, AI services
 
+## Agent Specifications (Defined but Not Integrated)
+The `agents/` folder contains detailed agent specifications:
+- job-description-archiver.md
+- executive-resume-tailor.md
+- ats-resume-reviewer.md
+- technical-hiring-manager.md
+- hr-professional.md
+- resume-review-agent.md
+- template-formatter.md
+- Status: These agent specifications are documented but NOT integrated into the current AI service
+
 ## Additional Features
-- User authentication and accounts
-- LinkedIn/Google OAuth
-- Password reset
-- True URL scraping from job boards
+- User authentication with OAuth (Google, LinkedIn)
+- Account page showing linked OAuth providers
+- Ability to link additional OAuth providers to existing account
+- Multi-user support (in progress - auth works, API isolation pending)
+
+## Not Currently Implemented
+- True URL scraping from job boards (job URL stored but not auto-fetched)
 - Personal instructions for resume generation
 - Industry panel feedback/tuning
-- Multi-user support
+- Advanced agent orchestration system (current implementation uses direct LLM prompts)
