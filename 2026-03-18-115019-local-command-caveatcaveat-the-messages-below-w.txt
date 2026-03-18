@@ -1,0 +1,1763 @@
+╭─── Claude Code v2.1.78 ──────────────────────────────────────────────────────╮
+│                                                    │ Tips for getting        │
+│            Welcome back Patrick Ronning!           │ started                 │
+│                                                    │ Run /init to create a … │
+│                       ▐▛███▜▌                      │ ─────────────────────── │
+│                      ▝▜█████▛▘                     │ Recent activity         │
+│                        ▘▘ ▝▝                       │ No recent activity      │
+│  minimax-m2.5:cloud · API Usage Billing · Manna    │                         │
+│  Health AI                                         │                         │
+│ ~/Resilio Sync/Ronning-Systems/Website_DEV/jobsync │                         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+  ↑ Opus now defaults to 1M context · 5x more room, same pricing
+
+❯ /plugin                                                                       
+  ⎿  (no content)
+
+❯ I want to transition this application to a flutter application for android    
+and iOS. let's create a branch for this work, and start figuring out where to   
+go.                                                                             
+
+⏺ I'll help you transition to Flutter. Let me first invoke the brainstorming
+  skill since this is a significant architectural decision that requires
+  planning.
+
+⏺ Skill(superpowers:brainstorming)
+  ⎿  Successfully loaded skill
+
+❯ /terminal-setup                                                               
+
+⏺ I'll start by exploring the current project context to understand what we're
+  working with.
+
+⏺ Searched for 2 patterns, read 1 file (ctrl+o to expand)
+
+⏺ Now I understand the project. This is a Job Application Tracking System
+  (JobSync) built with:
+  - Backend: FastAPI (Python)
+  - Frontend: Flask with Jinja2 templates
+  - Database: MariaDB
+  - AI Service: FastAPI with Ollama
+  - Deployment: Docker Compose
+
+  You want to transition this to a Flutter app for Android and iOS. This is a
+  significant architectural change.
+
+  Let me ask you a few clarifying questions to understand the scope:
+
+  What level of transition are you thinking?
+
+  1. Full rewrite — Rebuild the entire application in Flutter, replacing the web
+   frontend
+  2. New mobile client — Keep the existing backend/AI services and create a
+  Flutter mobile app that connects to them
+  3. Hybrid — Start with a new mobile client that connects to the existing API,
+  then gradually move functionality
+
+  My recommendation would be Option 2 (new mobile client) since your backend
+  services are already well-built and containerized. The mobile app would
+  connect to the existing API endpoints. What's your preference?
+
+❯ I would like to go with option 2, I agree that's the best route.              
+
+⏺ Good choice. Now let me understand more about what you need.
+
+  What features should the mobile app include? Should it be:
+
+  1. MVP — Just job tracking (add/edit/view jobs, status updates, dashboard
+  stats)
+  2. Full feature parity — Everything the web frontend does (job management,
+  resume generation, AI parsing, ATS analysis, tech fit analysis)
+  3. Enhanced — Add mobile-specific features like push notifications, offline
+  support, native device features
+
+  Also, a couple more questions:
+
+  - Do you have a design style in mind? (Material Design 3, iOS-style, custom)
+  - Are there any constraints? (Timeline, specific Flutter experience, need to
+  support both platforms from the start?)
+
+❯ I want feature parity, but I would love to explore a version that uses local  
+generation instead of sending anything off to my server and using my tokens. I  
+would like to add the ability for users to select files from their cloud        
+storage (google drive, microsoft onedrive). I would like to use the genereal    
+asthetic that's on the https://ronning.systems site currently. I want to launch 
+ with both android and iOS.                                                     
+
+⏺ That's an exciting vision. The local AI generation is a significant shift - it
+   means the app would run AI models entirely on-device rather than calling your
+   Ollama server. This has big benefits (privacy, no server costs, works
+  offline) but also introduces constraints.
+
+  Let me ask about the local AI:
+
+  For local AI, are you thinking:
+  1. On-device LLMs — Run a compact model like Phi-4, Gemma, or TinyLlama
+  directly on the phone (requires downloading the model, ~2-8GB storage)
+  2. Hybrid — Basic on-device processing for simple tasks, with optional server
+  fallback for complex AI when needed
+  3. On-device ML only — Use specialized on-device ML (like Google's ML Kit) for
+   specific tasks (text classification, entity extraction) rather than full LLM
+
+  Also, let me check the ronning.systems design for reference.
+
+⏺ Fetch(https://ronning.systems)
+  ⎿  Received 8.4KB (200 OK)
+
+⏺ Got it. So here's what I'm hearing:
+
+  Requirements:
+  - Feature parity with existing web app (job management, resume generation, AI
+  parsing, ATS analysis)
+  - Local AI generation — Run on-device instead of calling your Ollama server
+  - Cloud file picker — Google Drive & OneDrive integration for selecting files
+  - Design: Professional minimalist — navy/dark blue primary, green accent,
+  clean sans-serif, card-based layouts
+  - Platforms: Android & iOS from launch
+
+  Now let me propose 2-3 approaches for the local AI:
+
+  Option A: Full on-device LLM
+  - Use Flutter packages that run local LLMs (like llama.cpp bindings or
+  Google's ML Kit)
+  - Pros: Complete privacy, works offline, no server costs
+  - Cons: Heavy storage (2-8GB model download), slower on older devices, limited
+   model capability
+
+  Option B: On-device ML + API fallback
+  - Use on-device ML (Google ML Kit, TensorFlow Lite) for simpler tasks (entity
+  extraction, text classification)
+  - For complex AI (resume generation), offer optional API connection to your
+  server (user can provide their own API key)
+  - Pros: Lightweight, faster, fallback for complex tasks
+  - Cons: Still needs server for advanced AI
+
+  Option C: Local processing + cloud sync
+  - All job data stored locally on device
+  - AI runs against user's own API key (OpenAI, Anthropic, etc.) stored securely
+   on-device
+  - Your server becomes optional/backup
+  - Pros: User controls their API costs, full AI capability
+  - Cons: User needs their own API key
+
+  My recommendation: Option B — Lightweight on-device ML for
+  parsing/classification, with optional API connection to your existing Ollama
+  server (or user's own) for complex generation. This gives you feature parity
+  without the weight of a full on-device LLM.
+
+  What's your preference? Also, any thoughts on the AI approach?
+
+✻ Worked for 38s
+
+❯ the local generation storage impact is pretty steep, let's just stick with    
+making calls to my server api endpoints for processing. I want to go ahead and  
+add a $1/month subscription cost, for which I'll create a stripe account for    
+payment processing.                                                             
+
+⏺ That simplifies things. Here's the design:
+
+  ---
+  Architecture
+
+  Mobile Client → Your Existing API
+
+  The Flutter app will connect to your existing backend API (localhost:8000 or
+  deployed URL) and AI service. No changes needed to your server infrastructure.
+
+  ┌─────────────────┐     ┌─────────────┐     ┌─────────────┐
+  │  Flutter App    │────▶│  Your API   │────▶│  MariaDB    │
+  │  (iOS/Android)  │     │  (FastAPI)  │     │             │
+  └─────────────────┘     └─────────────┘     └─────────────┘
+                                 │
+                          ┌──────┴──────┐
+                          │ AI Service  │
+                          │ (Ollama)    │
+                          └─────────────┘
+
+  ---
+  Key Features
+
+  1. Authentication — User login/signup (using your existing auth)
+  2. Job Management — Full CRUD, 9-stage pipeline, dashboard stats
+  3. AI Features — Job description parsing, resume generation, ATS analysis,
+  tech fit (calls your server)
+  4. File Picker — Google Drive & OneDrive integration for selecting
+  resumes/templates
+  5. Subscription — $1/month via Stripe (free trial period TBD)
+  6. Offline Support — Cache job data locally, sync when online
+
+  ---
+  Monetization
+
+  - $1/month subscription through Stripe
+  - Check subscription status on app launch
+  - Grace period (e.g., 3 days) if payment fails
+  - Handle Stripe webhooks for subscription lifecycle
+
+  ---
+  UI/UX
+
+  - Design: Match ronning.systems aesthetic
+    - Primary: Navy/dark blue (#1e293b or similar)
+    - Accent: Green (#22c55e) for success/CTAs
+    - Background: Light neutral with dark navigation
+    - Typography: Clean sans-serif (system font or Roboto)
+    - Layout: Card-based, bottom navigation for main sections
+  - Navigation: Bottom nav with 4 tabs (Dashboard, Jobs, Resumes, Profile)
+  - Platform: Material Design 3, with iOS adaptations
+
+  ---
+  Does this design look right? Let me know if anything needs adjustment before I
+   write the full spec.
+
+❯ yes, that looks correct.                                                      
+
+⏺ Now I'll write the design doc and commit it.
+
+⏺ Bash(mkdir -p "docs/superpowers/specs")
+  ⎿  Done
+
+⏺ Write(docs/superpowers/specs/2026-03-18-jobsync-flutter-design.md)
+  ⎿  Wrote 391 lines to
+     docs/superpowers/specs/2026-03-18-jobsync-flutter-design.md
+       1 # JobSync Mobile App - Design Specification
+       2 
+       3 **Created:** 2026-03-18
+       4 **Status:** Approved
+       5 
+       6 ## Overview
+       7 
+       8 Transition the existing JobSync web application to a Flutter mob
+         ile app for Android and iOS. The mobile app will connect to the 
+         existing backend API, providing feature parity with the web fron
+         tend while adding cloud storage integration and subscription mon
+         etization.
+       9 
+      10 ## Architecture
+     … +381 lines (ctrl+o to expand)
+
+⏺ Now I'll dispatch the spec-reviewer subagent to review the design.
+
+⏺ Searched for 2 patterns, read 1 file (ctrl+o to expand)
+
+⏺ Agent(Review Flutter spec document)
+  ⎿  Done (1 tool use · 30.8k tokens · 20s)
+  (ctrl+o to expand)
+
+⏺ The reviewer found issues that need fixing. Let me update the spec to address
+  them.
+
+⏺ Read 1 file (ctrl+o to expand)
+
+⏺ Update(docs/superpowers/specs/2026-03-18-jobsync-flutter-design.md)
+  ⎿  Added 11 lines
+      43  - `POST /api/generate-resume` - AI resume generation
+      44  - Authentication endpoints (existing)
+      45  
+      46 +#### Authentication                                            
+      47 +                                                               
+      48 +- **Token Format**: Bearer token in Authorization header (`Auth
+         +orization: Bearer <token>`)                                    
+      49 +- **Token Storage**: Flutter Secure Storage (encrypted)        
+      50 +- **Token Refresh**: Automatic refresh using refresh token endp
+         +oint (if available) or re-login                                
+      51 +- **401 Handling**: Clear tokens, redirect to login screen     
+      52 +- **Error Handling**:                                          
+      53 +  - Network errors: Show retry option, use cached data if avail
+         +able                                                           
+      54 +  - Server errors (5xx): Show error message with retry         
+      55 +  - Client errors (4xx): Show specific error message           
+      56 +                                                               
+      57  ## Feature List
+      58  
+      59  ### Core Features
+
+⏺ Update(docs/superpowers/specs/2026-03-18-jobsync-flutter-design.md)
+  ⎿  Added 2 lines, removed 2 lines
+      286    # File Picking
+      287    file_picker: ^6.1.1
+      288    googleapis: ^12.0.0
+      289 -  onedrive_api: ^1.0.0  # or equivalent                       
+      289 +  http: ^1.2.0  # For Microsoft Graph API (OneDrive)          
+      290  
+      291    # Payment
+      292 -  flutter_stripe: ^10.1.0                                     
+      292 +  flutter_stripe: ^11.0.0                                     
+      293  
+      294    # UI Components
+      295    cached_network_image: ^3.3.1
+
+⏺ Update(docs/superpowers/specs/2026-03-18-jobsync-flutter-design.md)
+  ⎿  Added 11 lines
+      102     - Grace period (3 days) if payment fails
+      103     - Stripe webhooks for subscription lifecycle
+      104     - Subscription status display in profile
+      105 +   - **Free Tier Limitations**:                               
+      106 +     - Limited to 5 jobs max                                  
+      107 +     - No AI features (parsing, resume generation, analysis)  
+      108 +     - No cloud file picker (local files only)                
+      109 +     - View-only resume access (cannot upload)                
+      110 +   - **Paywall UI**:                                          
+      111 +     - Modal overlay when free limits exceeded                
+      112 +     - Shows benefits of subscription ($1/month, unlock all fe
+          +atures)                                                       
+      113 +     - "Start Free Trial" button (7 days)                     
+      114 +     - "Subscribe Now" button                                 
+      115 +     - "Maybe Later" to dismiss (with limited access)         
+      116  
+      117  8. **Offline Support**
+      118     - Cache job data locally
+
+⏺ Update(docs/superpowers/specs/2026-03-18-jobsync-flutter-design.md)
+  ⎿  Added 11 lines, removed 7 lines
+      399  
+      400  2. **Offline Operations**
+      401     - Queue create/update/delete operations
+      402 -   - Store in Hive with pending flag                          
+      403 -   - Process queue on connectivity restore                    
+      402 +   - Store in Hive with pending flag and timestamp            
+      403 +   - Process queue on connectivity restore (FIFO order)       
+      404 +   - **Failure Handling**:                                    
+      405 +     - Max 3 retry attempts per operation                     
+      406 +     - After max retries, mark as failed and notify user      
+      407 +     - User can manually retry failed operations              
+      408 +   - **Conflict Resolution** (server wins):                   
+      409 +     - If job edited on both mobile and web while offline, ser
+          +ver version overwrites local                                  
+      410 +     - If job deleted on server while edited locally, remove f
+          +rom local queue                                               
+      411 +     - Show notification to user when conflicts are resolved  
+      412 +   - **Queue Limits**: Max 50 pending operations, warn user wh
+          +en approaching limit                                          
+      413  
+      405 -3. **Sync Logic**                                             
+      406 -   - Pull-to-refresh triggers sync                            
+      407 -   - Auto-sync on app resume                                  
+      408 -   - Conflict resolution: server wins                         
+      409 -                                                              
+      414  4. **Indicators**
+      415     - Offline banner at top when disconnected
+      416     - Pending sync badge on jobs tab
+
+⏺ Update(docs/superpowers/specs/2026-03-18-jobsync-flutter-design.md)
+  ⎿  Added 4 lines, removed 2 lines
+      386  
+      387  ### Microsoft OneDrive
+      388  
+      389 -- OAuth2 authentication flow                                  
+      389 +- OAuth2 authentication flow via Microsoft Graph API          
+      390 +- HTTP client using `http` package to call Graph API          
+      391  - File picker for selecting resumes/templates
+      391 -- Read-only access to user's OneDrive                         
+      392 +- Read-only access to user's OneDrive files                   
+      393 +- Requires Azure AD app registration with Files.Read permissio
+          +n                                                             
+      394  
+      395  ## Offline Support Strategy
+      396  
+
+⏺ Bash(git add docs/superpowers/specs/2026-03-18-jobsync-flutter-design.md &&
+      git status)
+  ⎿  On branch main
+     Your branch is up to date with 'origin/main'.
+     … +10 lines (ctrl+o to expand)
+
+⏺ Agent(Review updated spec document)
+  ⎿  Done (1 tool use · 31.0k tokens · 20s)
+  (ctrl+o to expand)
+
+⏺ Searched for 4 patterns (ctrl+o to expand)
+
+⏺ Update(docs/superpowers/specs/2026-03-18-jobsync-flutter-design.md)
+  ⎿  Added 11 lines, removed 4 lines
+      41  - `POST /api/jobs/{id}/analyze-tech-fit` - Tech fit analysis
+      42  - `GET/POST/DELETE /api/resumes` - Resume management
+      43  - `POST /api/generate-resume` - AI resume generation
+      44 -- Authentication endpoints (existing)                          
+      44 +- Authentication endpoints (see below)                         
+      45  
+      46  #### Authentication
+      47  
+      48 -- **Token Format**: Bearer token in Authorization header (`Auth
+         -orization: Bearer <token>`)                                    
+      48 +The app uses OAuth2 (Google and LinkedIn) - same as the web fro
+         +ntend:                                                         
+      49 +                                                               
+      50 +- **Login Flow**: Redirect to Google/LinkedIn OAuth, handle cal
+         +lback, receive token                                           
+      51 +- **Token Format**: Passed as query parameter (`?token=<token>`
+         +) for API calls                                                
+      52  - **Token Storage**: Flutter Secure Storage (encrypted)
+      50 -- **Token Refresh**: Automatic refresh using refresh token endp
+         -oint (if available) or re-login                                
+      51 -- **401 Handling**: Clear tokens, redirect to login screen     
+      53 +- **Token on Requests**: Include as query param `?token={token}
+         +` for authenticated endpoints                                  
+      54 +- **401 Handling**: Clear tokens, redirect to OAuth login      
+      55 +- **Endpoints**:                                               
+      56 +  - `/api/auth/oauth-callback` - Process OAuth code, returns au
+         +th token                                                       
+      57 +  - `/api/auth/me?token=<token>` - Get current user info       
+      58 +  - `/api/auth/logout` - Logout (client should also clear local
+         + tokens)                                                       
+      59  - **Error Handling**:
+      60    - Network errors: Show retry option, use cached data if avail
+          able
+      61    - Server errors (5xx): Show error message with retry
+
+⏺ Read 1 file (ctrl+o to expand)
+
+⏺ Update(docs/superpowers/specs/2026-03-18-jobsync-flutter-design.md)
+  ⎿  Added 5 lines
+      420       - Show notification to user when conflicts are resolved
+      421     - **Queue Limits**: Max 50 pending operations, warn user wh
+           en approaching limit
+      422  
+      423 +3. **Sync Logic**                                             
+      424 +   - Pull-to-refresh triggers sync                            
+      425 +   - Auto-sync on app resume                                  
+      426 +   - Conflict resolution: server wins                         
+      427 +                                                              
+      428  4. **Indicators**
+      429     - Offline banner at top when disconnected
+      430     - Pending sync badge on jobs tab
+
+⏺ Update(docs/superpowers/specs/2026-03-18-jobsync-flutter-design.md)
+  ⎿  Added 7 lines
+      383  4. Webhook updates subscription status
+      384  5. App reflects current status in Profile screen
+      385  
+      386 +#### Grace Period Implementation                              
+      387 +                                                              
+      388 +- **Backend-driven**: The API should return subscription statu
+          +s including grace period info                                 
+      389 +- **Expected API response**: `{ "is_active": true/false, "grac
+          +e_period_until": "2024-01-15T00:00:00Z" }`                    
+      390 +- **Client logic**: If `grace_period_until` is in the future, 
+          +allow full access                                             
+      391 +- **If no grace period from API**: Fall back to 3-day local gr
+          +ace period (stored when payment fails)                        
+      392 +                                                              
+      393  ## Cloud Storage Integration
+      394  
+      395  ### Google Drive
+
+⏺ Bash(git add docs/superpowers/specs/2026-03-18-jobsync-flutter-design.md &&
+      git commit -m "$(cat <<'EOF'
+      Update Flutter design spec with fixes from review…)
+  ⎿  [main 9030a3e] Update Flutter design spec with fixes from review
+      1 file changed, 438 insertions(+)
+      create mode 100644 docs/superpowers/specs/2026-03-18-jobsync-flutter-
+     design.md
+
+⏺ Agent(Re-review spec after fixes)
+  ⎿  Done (1 tool use · 31.4k tokens · 16s)
+  (ctrl+o to expand)
+
+⏺ Update(docs/superpowers/specs/2026-03-18-jobsync-flutter-design.md)
+  ⎿  Added 2 lines, removed 1 line
+      26  ### Components
+      27  
+      28  1. **Mobile Client**: Flutter app connecting to existing API en
+          dpoints
+      29 -2. **Existing Backend**: FastAPI at port 8000 (no changes requi
+         -red)                                                           
+      29 +2. **Existing Backend**: FastAPI at port 8000 (most features wo
+         +rk without changes)                                            
+      30  3. **Existing AI Service**: Ollama integration at port 8001 (no
+           changes required)
+      31  4. **Existing Database**: MariaDB (no changes required)
+      32 +5. **Backend Changes Required**: For subscription/Stripe featur
+         +es (see Section 7)                                             
+      33  
+      34  ### API Integration
+      35  
+
+⏺ Update(docs/superpowers/specs/2026-03-18-jobsync-flutter-design.md)
+  ⎿  Added 1 line, removed 1 line
+      387  #### Grace Period Implementation
+      388  
+      389  - **Backend-driven**: The API should return subscription statu
+           s including grace period info
+      390 -- **Expected API response**: `{ "is_active": true/false, "grac
+          -e_period_until": "2024-01-15T00:00:00Z" }`                    
+      390 +- **Expected API response**: `{ "is_active": true/false, "grac
+          +e_period_until": "2026-03-25T00:00:00Z" }`                    
+      391  - **Client logic**: If `grace_period_until` is in the future, 
+           allow full access
+      392  - **If no grace period from API**: Fall back to 3-day local gr
+           ace period (stored when payment fails)
+      393  
+
+⏺ Update(docs/superpowers/specs/2026-03-18-jobsync-flutter-design.md)
+  ⎿  Added 2 lines, removed 2 lines
+      298    hive_flutter: ^1.1.0
+      299    shared_preferences: ^2.2.2
+      300  
+      301 -  # Authentication                                            
+      301 +  # Authentication (OAuth2)                                   
+      302    flutter_secure_storage: ^9.0.0
+      303 -  google_sign_in: ^6.2.1                                      
+      303 +  google_sign_in: ^6.2.1  # For native Google OAuth, or use ur
+          +l_launcher for web-based flow                                 
+      304  
+      305    # File Picking
+      306    file_picker: ^6.1.1
+
+⏺ Read 1 file (ctrl+o to expand)
+
+⏺ Update(docs/superpowers/specs/2026-03-18-jobsync-flutter-design.md)
+  ⎿  Added 5 lines
+      365  
+      366  ## Monetization Details
+      367  
+      368 +> **Backend Changes Required**: The following features require
+          + backend additions:                                           
+      369 +> - Stripe webhook handlers for subscription lifecycle        
+      370 +> - Subscription status endpoint (returns `is_active` and `gra
+          +ce_period_until`)                                             
+      371 +> - Integration with your Stripe account                      
+      372 +                                                              
+      373  ### Stripe Integration
+      374  
+      375  - **Product**: $1/month subscription
+
+⏺ Bash(git add docs/superpowers/specs/2026-03-18-jobsync-flutter-design.md &&
+      git commit -m "$(cat <<'EOF'
+      Fix spec review issues: backend changes, date, auth…)
+  ⎿  [main 258b543] Fix spec review issues: backend changes, date, auth
+      1 file changed, 10 insertions(+), 4 deletions(-)
+
+⏺ Agent(Final spec review)
+  ⎿  Done (1 tool use · 31.5k tokens · 19s)
+  (ctrl+o to expand)
+
+⏺ The spec is now approved. Before I invoke writing-plans, let me also create
+  the Flutter branch as you requested.
+
+⏺ Bash(git checkout -b flutter-mobile)
+  ⎿  Switched to a new branch 'flutter-mobile'
+
+⏺ Spec written and committed to
+  docs/superpowers/specs/2026-03-18-jobsync-flutter-design.md. Created the
+  flutter-mobile branch for this work.
+
+  Please review the spec and let me know if you want to make any changes before 
+  we start writing the implementation plan.
+
+  Once approved, I'll invoke the writing-plans skill to create the
+  implementation plan.
+
+✻ Cogitated for 5m 46s
+
+❯ approved.                                                                     
+
+⏺ Skill(superpowers:writing-plans)
+  ⎿  Successfully loaded skill
+
+⏺ I'm using the writing-plans skill to create the implementation plan.
+
+  Let me first map out the file structure and then decompose into tasks.
+
+⏺ Bash(mkdir -p "docs/superpowers/plans")
+  ⎿  Done
+
+⏺ Write(docs/superpowers/plans/2026-03-18-jobsync-flutter-plan.md)
+  ⎿  Wrote 2152 lines to
+     docs/superpowers/plans/2026-03-18-jobsync-flutter-plan.md
+      1 # JobSync Flutter Mobile App Implementation Plan
+      2 
+      3 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:su
+        bagent-driven-development (recommended) or superpowers:executing-
+        plans to implement this plan task-by-task. Steps use checkbox (`-
+         [ ]`) syntax for tracking.
+      4 
+      5 **Goal:** Create a Flutter mobile app for iOS and Android that co
+        nnects to the existing JobSync API, providing feature parity with
+         the web frontend plus cloud file picking and $1/month Stripe sub
+        scription.
+      6 
+      7 **Architecture:** The app follows Clean Architecture with BLoC pa
+        ttern. It connects to existing FastAPI backend (no changes except
+         subscription endpoints). UI uses Material Design 3 matching ronn
+        ing.systems aesthetic (navy primary, green accent).
+      8 
+      9 **Tech Stack:** Flutter 3.x, BLoC for state management, Dio for n
+        etworking, Hive for local caching, Flutter Secure Storage for tok
+        ens, Stripe for payments, Google Drive + Microsoft Graph APIs for
+         cloud files.
+     … +2142 lines (ctrl+o to expand)
+
+⏺ Searched for 1 pattern (ctrl+o to expand)
+
+⏺ Agent(Review Flutter implementation plan)
+  ⎿  Done (14 tool uses · 44.9k tokens · 1m 20s)
+  (ctrl+o to expand)
+
+⏺ The reviewer found that Tasks 8-13 need more detail. Let me fix this.
+
+⏺ Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+⏺ Update(docs/superpowers/plans/2026-03-18-jobsync-flutter-plan.md)
+  ⎿  Added 942 lines, removed 23 lines
+      2105  
+      2106  ### Phase 2: Feature Implementation
+      2107  
+      2108 -Due to the complexity and length of the full implementation, 
+           -the remaining features follow a similar pattern:             
+      2109 -                                                             
+      2108  ### Task 8: Jobs Feature (Full CRUD)
+      2111 -- Jobs list screen with search/filter                        
+      2112 -- Job detail screen                                          
+      2113 -- Job form (add/edit)                                        
+      2114 -- Status management                                          
+      2115 -- AI actions (parse, generate resume, analyze)               
+      2109  
+      2117 -### Task 9: Resumes Feature                                  
+      2118 -- Resume list screen                                         
+      2119 -- Upload from device                                         
+      2120 -- Upload from Google Drive                                   
+      2121 -- Upload from OneDrive                                       
+      2110 +**Files:**                                                   
+      2111 +- Modify: `lib/features/jobs/bloc/jobs_bloc.dart`            
+      2112 +- Create: `lib/features/jobs/jobs_list_screen.dart`          
+      2113 +- Create: `lib/features/jobs/job_detail_screen.dart`         
+      2114 +- Create: `lib/features/jobs/job_form_screen.dart`           
+      2115 +- Create: `lib/features/jobs/widgets/job_card.dart`          
+      2116  
+      2123 -### Task 10: Profile Feature                                 
+      2124 -- User profile display                                       
+      2125 -- Subscription status                                        
+      2126 -- Settings                                                   
+      2117 +- [ ] **Step 1: Create jobs_repository.dart**                
+      2118  
+      2128 -### Task 11: Subscription/Stripe Integration                 
+      2129 -- Stripe checkout                                            
+      2130 -- Paywall dialog                                             
+      2131 -- Subscription status checking                               
+      2119 +```dart                                                      
+      2120 +import '../sources/api_client.dart';                         
+      2121 +import '../models/job_model.dart';                           
+      2122 +import '../../core/constants/api_constants.dart';            
+      2123  
+      2124 +class JobsRepository {                                       
+      2125 +  final ApiClient _apiClient;                                
+      2126 +                                                             
+      2127 +  JobsRepository({ApiClient? apiClient}) : _apiClient = apiCl
+           +ient ?? ApiClient();                                         
+      2128 +                                                             
+      2129 +  Future<List<JobModel>> getJobs() async {                   
+      2130 +    final response = await _apiClient.get(ApiConstants.jobs);
+      2131 +    return (response.data as List).map((json) => JobModel.fro
+           +mJson(json)).toList();                                       
+      2132 +  }                                                          
+      2133 +                                                             
+      2134 +  Future<JobModel> getJob(String id) async {                 
+      2135 +    final response = await _apiClient.get(ApiConstants.job(id
+           +));                                                          
+      2136 +    return JobModel.fromJson(response.data);                 
+      2137 +  }                                                          
+      2138 +                                                             
+      2139 +  Future<JobModel> createJob(Map<String, dynamic> data) async
+           + {                                                           
+      2140 +    final response = await _apiClient.post(ApiConstants.jobs,
+           + data: data);                                                
+      2141 +    return JobModel.fromJson(response.data);                 
+      2142 +  }                                                          
+      2143 +                                                             
+      2144 +  Future<JobModel> updateJob(String id, Map<String, dynamic> 
+           +data) async {                                                
+      2145 +    final response = await _apiClient.put(ApiConstants.job(id
+           +), data: data);                                              
+      2146 +    return JobModel.fromJson(response.data);                 
+      2147 +  }                                                          
+      2148 +                                                             
+      2149 +  Future<void> deleteJob(String id) async {                  
+      2150 +    await _apiClient.delete(ApiConstants.job(id));           
+      2151 +  }                                                          
+      2152 +                                                             
+      2153 +  Future<Map<String, dynamic>> parseDescription(String id, St
+           +ring description) async {                                    
+      2154 +    final response = await _apiClient.post(                  
+      2155 +      ApiConstants.parseDescription(id),                     
+      2156 +      data: {'description': description},                    
+      2157 +    );                                                       
+      2158 +    return response.data;                                    
+      2159 +  }                                                          
+      2160 +                                                             
+      2161 +  Future<Map<String, dynamic>> analyzeAts(String id, String r
+           +esumeId) async {                                             
+      2162 +    final response = await _apiClient.post(                  
+      2163 +      ApiConstants.analyzeAts(id),                           
+      2164 +      data: {'resume_id': resumeId},                         
+      2165 +    );                                                       
+      2166 +    return response.data;                                    
+      2167 +  }                                                          
+      2168 +                                                             
+      2169 +  Future<Map<String, dynamic>> analyzeTechFit(String id) asyn
+           +c {                                                          
+      2170 +    final response = await _apiClient.post(ApiConstants.analy
+           +zeTechFit(id));                                              
+      2171 +    return response.data;                                    
+      2172 +  }                                                          
+      2173 +}                                                            
+      2174 +```                                                          
+      2175 +                                                             
+      2176 +- [ ] **Step 2: Create jobs_list_screen.dart**               
+      2177 +                                                             
+      2178 +```dart                                                      
+      2179 +import 'package:flutter/material.dart';                      
+      2180 +import 'package:flutter_bloc/flutter_bloc.dart';             
+      2181 +import '../../../core/theme/app_theme.dart';                 
+      2182 +import '../../../data/models/job_model.dart';                
+      2183 +import '../bloc/jobs_bloc.dart';                             
+      2184 +import '../bloc/jobs_event.dart';                            
+      2185 +import '../widgets/job_card.dart';                           
+      2186 +                                                             
+      2187 +class JobsListScreen extends StatefulWidget {                
+      2188 +  const JobsListScreen({super.key});                         
+      2189 +                                                             
+      2190 +  @override                                                  
+      2191 +  State<JobsListScreen> createState() => _JobsListScreenState
+           +();                                                          
+      2192 +}                                                            
+      2193 +                                                             
+      2194 +class _JobsListScreenState extends State<JobsListScreen> {   
+      2195 +  String _searchQuery = '';                                  
+      2196 +  JobStatus? _filterStatus;                                  
+      2197 +                                                             
+      2198 +  @override                                                  
+      2199 +  Widget build(BuildContext context) {                       
+      2200 +    return Scaffold(                                         
+      2201 +      appBar: AppBar(                                        
+      2202 +        title: const Text('Jobs'),                           
+      2203 +        actions: [                                           
+      2204 +          IconButton(                                        
+      2205 +            icon: const Icon(Icons.filter_list),             
+      2206 +            onPressed: _showFilterDialog,                    
+      2207 +          ),                                                 
+      2208 +        ],                                                   
+      2209 +      ),                                                     
+      2210 +      body: Column(                                          
+      2211 +        children: [                                          
+      2212 +          // Search bar                                      
+      2213 +          Padding(                                           
+      2214 +            padding: const EdgeInsets.all(16),               
+      2215 +            child: TextField(                                
+      2216 +              decoration: InputDecoration(                   
+      2217 +                hintText: 'Search jobs...',                  
+      2218 +                prefixIcon: const Icon(Icons.search),        
+      2219 +                border: OutlineInputBorder(                  
+      2220 +                  borderRadius: BorderRadius.circular(8),    
+      2221 +                ),                                           
+      2222 +              ),                                             
+      2223 +              onChanged: (value) {                           
+      2224 +                setState(() => _searchQuery = value);        
+      2225 +              },                                             
+      2226 +            ),                                               
+      2227 +          ),                                                 
+      2228 +          // Filter chips                                    
+      2229 +          if (_filterStatus != null)                         
+      2230 +            Padding(                                         
+      2231 +              padding: const EdgeInsets.symmetric(horizontal:
+           + 16),                                                        
+      2232 +              child: Row(                                    
+      2233 +                children: [                                  
+      2234 +                  Chip(                                      
+      2235 +                    label: Text(_filterStatus!.displayName), 
+      2236 +                    onDeleted: () => setState(() => _filterSt
+           +atus = null),                                                
+      2237 +                  ),                                         
+      2238 +                ],                                           
+      2239 +              ),                                             
+      2240 +            ),                                               
+      2241 +          // Jobs list                                       
+      2242 +          Expanded(                                          
+      2243 +            child: BlocBuilder<JobsBloc, JobsState>(         
+      2244 +              builder: (context, state) {                    
+      2245 +                if (state is JobsLoading) {                  
+      2246 +                  return const Center(child: CircularProgress
+           +Indicator());                                                
+      2247 +                }                                            
+      2248 +                                                             
+      2249 +                if (state is JobsError) {                    
+      2250 +                  return Center(child: Text(state.message)); 
+      2251 +                }                                            
+      2252 +                                                             
+      2253 +                if (state is JobsLoaded) {                   
+      2254 +                  var jobs = state.jobs;                     
+      2255 +                                                             
+      2256 +                  // Apply search filter                     
+      2257 +                  if (_searchQuery.isNotEmpty) {             
+      2258 +                    jobs = jobs.where((job) =>               
+      2259 +                        job.company.toLowerCase().contains(_s
+           +earchQuery.toLowerCase()) ||                                 
+      2260 +                        job.position.toLowerCase().contains(_
+           +searchQuery.toLowerCase())).toList();                        
+      2261 +                  }                                          
+      2262 +                                                             
+      2263 +                  // Apply status filter                     
+      2264 +                  if (_filterStatus != null) {               
+      2265 +                    jobs = jobs.where((job) => job.status == 
+           +_filterStatus).toList();                                     
+      2266 +                  }                                          
+      2267 +                                                             
+      2268 +                  if (jobs.isEmpty) {                        
+      2269 +                    return const Center(child: Text('No jobs 
+           +found'));                                                    
+      2270 +                  }                                          
+      2271 +                                                             
+      2272 +                  return RefreshIndicator(                   
+      2273 +                    onRefresh: () async {                    
+      2274 +                      context.read<JobsBloc>().add(const Jobs
+           +RefreshRequested());                                         
+      2275 +                    },                                       
+      2276 +                    child: ListView.builder(                 
+      2277 +                      padding: const EdgeInsets.all(16),     
+      2278 +                      itemCount: jobs.length,                
+      2279 +                      itemBuilder: (context, index) {        
+      2280 +                        return JobCard(                      
+      2281 +                          job: jobs[index],                  
+      2282 +                          onTap: () {                        
+      2283 +                            // Navigate to job detail        
+      2284 +                          },                                 
+      2285 +                        );                                   
+      2286 +                      },                                     
+      2287 +                    ),                                       
+      2288 +                  );                                         
+      2289 +                }                                            
+      2290 +                                                             
+      2291 +                return const SizedBox();                     
+      2292 +              },                                             
+      2293 +            ),                                               
+      2294 +          ),                                                 
+      2295 +        ],                                                   
+      2296 +      ),                                                     
+      2297 +      floatingActionButton: FloatingActionButton(            
+      2298 +        onPressed: () {                                      
+      2299 +          // Navigate to add job                             
+      2300 +        },                                                   
+      2301 +        backgroundColor: AppColors.accent,                   
+      2302 +        child: const Icon(Icons.add, color: Colors.white),   
+      2303 +      ),                                                     
+      2304 +    );                                                       
+      2305 +  }                                                          
+      2306 +                                                             
+      2307 +  void _showFilterDialog() {                                 
+      2308 +    showModalBottomSheet(                                    
+      2309 +      context: context,                                      
+      2310 +      builder: (context) {                                   
+      2311 +        return ListView(                                     
+      2312 +          shrinkWrap: true,                                  
+      2313 +          children: [                                        
+      2314 +            const Padding(                                   
+      2315 +              padding: EdgeInsets.all(16),                   
+      2316 +              child: Text('Filter by Status', style: AppTypog
+           +raphy.h3),                                                   
+      2317 +            ),                                               
+      2318 +            ...JobStatus.values.map((status) {               
+      2319 +              return ListTile(                               
+      2320 +                title: Text(status.displayName),             
+      2321 +                trailing: _filterStatus == status ? const Ico
+           +n(Icons.check) : null,                                       
+      2322 +                onTap: () {                                  
+      2323 +                  setState(() => _filterStatus = status);    
+      2324 +                  Navigator.pop(context);                    
+      2325 +                },                                           
+      2326 +              );                                             
+      2327 +            }),                                              
+      2328 +          ],                                                 
+      2329 +        );                                                   
+      2330 +      },                                                     
+      2331 +    );                                                       
+      2332 +  }                                                          
+      2333 +}                                                            
+      2334 +```                                                          
+      2335 +                                                             
+      2336 +- [ ] **Step 3: Create job_card.dart**                       
+      2337 +                                                             
+      2338 +```dart                                                      
+      2339 +import 'package:flutter/material.dart';                      
+      2340 +import '../../../core/theme/app_theme.dart';                 
+      2341 +import '../../../data/models/job_model.dart';                
+      2342 +                                                             
+      2343 +class JobCard extends StatelessWidget {                      
+      2344 +  final JobModel job;                                        
+      2345 +  final VoidCallback? onTap;                                 
+      2346 +                                                             
+      2347 +  const JobCard({super.key, required this.job, this.onTap}); 
+      2348 +                                                             
+      2349 +  @override                                                  
+      2350 +  Widget build(BuildContext context) {                       
+      2351 +    return Card(                                             
+      2352 +      margin: const EdgeInsets.only(bottom: 12),             
+      2353 +      child: InkWell(                                        
+      2354 +        onTap: onTap,                                        
+      2355 +        borderRadius: BorderRadius.circular(16),             
+      2356 +        child: Padding(                                      
+      2357 +          padding: const EdgeInsets.all(16),                 
+      2358 +          child: Column(                                     
+      2359 +            crossAxisAlignment: CrossAxisAlignment.start,    
+      2360 +            children: [                                      
+      2361 +              Row(                                           
+      2362 +                children: [                                  
+      2363 +                  CircleAvatar(                              
+      2364 +                    backgroundColor: AppColors.primary,      
+      2365 +                    child: Text(                             
+      2366 +                      job.company.substring(0, 1).toUpperCase
+           +(),                                                          
+      2367 +                      style: const TextStyle(color: Colors.wh
+           +ite),                                                        
+      2368 +                    ),                                       
+      2369 +                  ),                                         
+      2370 +                  const SizedBox(width: 12),                 
+      2371 +                  Expanded(                                  
+      2372 +                    child: Column(                           
+      2373 +                      crossAxisAlignment: CrossAxisAlignment.
+           +start,                                                       
+      2374 +                      children: [                            
+      2375 +                        Text(job.company, style: AppTypograph
+           +y.h4),                                                       
+      2376 +                        Text(job.position, style: AppTypograp
+           +hy.body2),                                                   
+      2377 +                      ],                                     
+      2378 +                    ),                                       
+      2379 +                  ),                                         
+      2380 +                  _buildStatusChip(job.status),              
+      2381 +                ],                                           
+      2382 +              ),                                             
+      2383 +              if (job.location != null || job.salary != null)
+           + ...[                                                        
+      2384 +                const SizedBox(height: 12),                  
+      2385 +                Row(                                         
+      2386 +                  children: [                                
+      2387 +                    if (job.location != null) ...[           
+      2388 +                      const Icon(Icons.location_on, size: 16,
+           + color: AppColors.textSecondary),                            
+      2389 +                      const SizedBox(width: 4),              
+      2390 +                      Text(job.location!, style: AppTypograph
+           +y.caption),                                                  
+      2391 +                      const SizedBox(width: 12),             
+      2392 +                    ],                                       
+      2393 +                    if (job.salary != null) ...[             
+      2394 +                      const Icon(Icons.attach_money, size: 16
+           +, color: AppColors.textSecondary),                           
+      2395 +                      Text(job.salary!, style: AppTypography.
+           +caption),                                                    
+      2396 +                    ],                                       
+      2397 +                  ],                                         
+      2398 +                ),                                           
+      2399 +              ],                                             
+      2400 +            ],                                               
+      2401 +          ),                                                 
+      2402 +        ),                                                   
+      2403 +      ),                                                     
+      2404 +    );                                                       
+      2405 +  }                                                          
+      2406 +                                                             
+      2407 +  Widget _buildStatusChip(JobStatus status) {                
+      2408 +    // Same implementation as dashboard                      
+      2409 +    // ... (see dashboard_screen.dart)                       
+      2410 +    return Container(                                        
+      2411 +      padding: const EdgeInsets.symmetric(horizontal: 8, vert
+           +ical: 4),                                                    
+      2412 +      decoration: BoxDecoration(                             
+      2413 +        color: _getStatusColor(status).withOpacity(0.2),     
+      2414 +        borderRadius: BorderRadius.circular(4),              
+      2415 +      ),                                                     
+      2416 +      child: Text(                                           
+      2417 +        status.displayName,                                  
+      2418 +        style: TextStyle(color: _getStatusColor(status), font
+           +Size: 12),                                                   
+      2419 +      ),                                                     
+      2420 +    );                                                       
+      2421 +  }                                                          
+      2422 +                                                             
+      2423 +  Color _getStatusColor(JobStatus status) {                  
+      2424 +    switch (status) {                                        
+      2425 +      case JobStatus.saved: return AppColors.savedText;      
+      2426 +      case JobStatus.applied: return AppColors.appliedText;  
+      2427 +      case JobStatus.phoneScreen: return AppColors.phoneScree
+           +nText;                                                       
+      2428 +      case JobStatus.interview: return AppColors.interviewTex
+           +t;                                                           
+      2429 +      case JobStatus.executiveCall: return AppColors.executiv
+           +eCallText;                                                   
+      2430 +      case JobStatus.offered: return AppColors.offeredText;  
+      2431 +      case JobStatus.rejected: return AppColors.rejectedText;
+      2432 +      case JobStatus.withdrawn: return AppColors.withdrawnTex
+           +t;                                                           
+      2433 +      case JobStatus.closed: return AppColors.closedText;    
+      2434 +    }                                                        
+      2435 +  }                                                          
+      2436 +}                                                            
+      2437 +```                                                          
+      2438 +                                                             
+      2439 +- [ ] **Step 4: Commit**                                     
+      2440 +                                                             
+      2441 +```bash                                                      
+      2442 +git add lib/features/jobs/                                   
+      2443 +git commit -m "feat: add jobs feature with list and cards"   
+      2444 +```                                                          
+      2445 +                                                             
+      2446 +---                                                          
+      2447 +                                                             
+      2448 +### Task 9: AI Actions & Job Detail                          
+      2449 +                                                             
+      2450 +**Files:**                                                   
+      2451 +- Create: `lib/features/jobs/job_detail_screen.dart`         
+      2452 +                                                             
+      2453 +- [ ] **Step 1: Create job_detail_screen.dart**              
+      2454 +                                                             
+      2455 +```dart                                                      
+      2456 +import 'package:flutter/material.dart';                      
+      2457 +import 'package:flutter_bloc/flutter_bloc.dart';             
+      2458 +import '../../../core/theme/app_theme.dart';                 
+      2459 +import '../../../data/models/job_model.dart';                
+      2460 +import '../bloc/jobs_bloc.dart';                             
+      2461 +import '../bloc/jobs_event.dart';                            
+      2462 +                                                             
+      2463 +class JobDetailScreen extends StatelessWidget {              
+      2464 +  final String jobId;                                        
+      2465 +                                                             
+      2466 +  const JobDetailScreen({super.key, required this.jobId});   
+      2467 +                                                             
+      2468 +  @override                                                  
+      2469 +  Widget build(BuildContext context) {                       
+      2470 +    return Scaffold(                                         
+      2471 +      appBar: AppBar(                                        
+      2472 +        title: const Text('Job Details'),                    
+      2473 +        actions: [                                           
+      2474 +          IconButton(                                        
+      2475 +            icon: const Icon(Icons.edit),                    
+      2476 +            onPressed: () {                                  
+      2477 +              // Navigate to edit form                       
+      2478 +            },                                               
+      2479 +          ),                                                 
+      2480 +          IconButton(                                        
+      2481 +            icon: const Icon(Icons.delete),                  
+      2482 +            onPressed: () => _showDeleteDialog(context),     
+      2483 +          ),                                                 
+      2484 +        ],                                                   
+      2485 +      ),                                                     
+      2486 +      body: BlocBuilder<JobsBloc, JobsState>(                
+      2487 +        builder: (context, state) {                          
+      2488 +          if (state is JobsLoading) {                        
+      2489 +            return const Center(child: CircularProgressIndica
+           +tor());                                                      
+      2490 +          }                                                  
+      2491 +                                                             
+      2492 +          final job = state is JobsLoaded                    
+      2493 +              ? state.jobs.firstWhere((j) => j.id == jobId, o
+           +rElse: () => throw Exception('Job not found'))               
+      2494 +              : null;                                        
+      2495 +                                                             
+      2496 +          if (job == null) {                                 
+      2497 +            return const Center(child: Text('Job not found'))
+           +;                                                            
+      2498 +          }                                                  
+      2499 +                                                             
+      2500 +          return SingleChildScrollView(                      
+      2501 +            padding: const EdgeInsets.all(16),               
+      2502 +            child: Column(                                   
+      2503 +              crossAxisAlignment: CrossAxisAlignment.start,  
+      2504 +              children: [                                    
+      2505 +                // Header                                    
+      2506 +                _buildHeader(job),                           
+      2507 +                const SizedBox(height: 24),                  
+      2508 +                // Details                                   
+      2509 +                _buildDetails(job),                          
+      2510 +                const SizedBox(height: 24),                  
+      2511 +                // Description                               
+      2512 +                if (job.description != null) ...[            
+      2513 +                  Text('Job Description', style: AppTypograph
+           +y.h3),                                                       
+      2514 +                  const SizedBox(height: 8),                 
+      2515 +                  Text(job.description!, style: AppTypography
+           +.body1),                                                     
+      2516 +                  const SizedBox(height: 24),                
+      2517 +                ],                                           
+      2518 +                // Keywords                                  
+      2519 +                if (job.keywords.isNotEmpty) ...[            
+      2520 +                  Text('Keywords', style: AppTypography.h3), 
+      2521 +                  const SizedBox(height: 8),                 
+      2522 +                  Wrap(                                      
+      2523 +                    spacing: 8,                              
+      2524 +                    runSpacing: 8,                           
+      2525 +                    children: job.keywords.map((k) => Chip(la
+           +bel: Text(k))).toList(),                                     
+      2526 +                  ),                                         
+      2527 +                  const SizedBox(height: 24),                
+      2528 +                ],                                           
+      2529 +                // AI Actions                                
+      2530 +                Text('AI Actions', style: AppTypography.h3), 
+      2531 +                const SizedBox(height: 12),                  
+      2532 +                _buildAIActions(context, job),               
+      2533 +              ],                                             
+      2534 +            ),                                               
+      2535 +          );                                                 
+      2536 +        },                                                   
+      2537 +      ),                                                     
+      2538 +    );                                                       
+      2539 +  }                                                          
+      2540 +                                                             
+      2541 +  Widget _buildHeader(JobModel job) {                        
+      2542 +    return Row(                                              
+      2543 +      children: [                                            
+      2544 +        CircleAvatar(                                        
+      2545 +          radius: 30,                                        
+      2546 +          backgroundColor: AppColors.primary,                
+      2547 +          child: Text(                                       
+      2548 +            job.company.substring(0, 1).toUpperCase(),       
+      2549 +            style: const TextStyle(color: Colors.white, fontS
+           +ize: 24),                                                    
+      2550 +          ),                                                 
+      2551 +        ),                                                   
+      2552 +        const SizedBox(width: 16),                           
+      2553 +        Expanded(                                            
+      2554 +          child: Column(                                     
+      2555 +            crossAxisAlignment: CrossAxisAlignment.start,    
+      2556 +            children: [                                      
+      2557 +              Text(job.position, style: AppTypography.h2),   
+      2558 +              Text(job.company, style: AppTypography.body1), 
+      2559 +            ],                                               
+      2560 +          ),                                                 
+      2561 +        ),                                                   
+      2562 +      ],                                                     
+      2563 +    );                                                       
+      2564 +  }                                                          
+      2565 +                                                             
+      2566 +  Widget _buildDetails(JobModel job) {                       
+      2567 +    return Card(                                             
+      2568 +      child: Padding(                                        
+      2569 +        padding: const EdgeInsets.all(16),                   
+      2570 +        child: Column(                                       
+      2571 +          children: [                                        
+      2572 +            if (job.location != null)                        
+      2573 +              _buildDetailRow(Icons.location_on, 'Location', 
+           +job.location!),                                              
+      2574 +            if (job.salary != null)                          
+      2575 +              _buildDetailRow(Icons.attach_money, 'Salary', j
+           +ob.salary!),                                                 
+      2576 +            _buildDetailRow(Icons.calendar_today, 'Applied', 
+      2577 +              job.createdAt.toString().split(' ')[0]),       
+      2578 +            _buildDetailRow(Icons.flag, 'Status', job.status.
+           +displayName),                                                
+      2579 +          ],                                                 
+      2580 +        ),                                                   
+      2581 +      ),                                                     
+      2582 +    );                                                       
+      2583 +  }                                                          
+      2584 +                                                             
+      2585 +  Widget _buildDetailRow(IconData icon, String label, String 
+           +value) {                                                     
+      2586 +    return Padding(                                          
+      2587 +      padding: const EdgeInsets.symmetric(vertical: 8),      
+      2588 +      child: Row(                                            
+      2589 +        children: [                                          
+      2590 +          Icon(icon, size: 20, color: AppColors.textSecondary
+           +),                                                           
+      2591 +          const SizedBox(width: 12),                         
+      2592 +          Text('$label: ', style: AppTypography.body2),      
+      2593 +          Text(value, style: AppTypography.body1),           
+      2594 +        ],                                                   
+      2595 +      ),                                                     
+      2596 +    );                                                       
+      2597 +  }                                                          
+      2598 +                                                             
+      2599 +  Widget _buildAIActions(BuildContext context, JobModel job) 
+           +{                                                            
+      2600 +    return Column(                                           
+      2601 +      children: [                                            
+      2602 +        _buildAIButton(                                      
+      2603 +          context,                                           
+      2604 +          'Parse Description',                               
+      2605 +          Icons.auto_fix_high,                               
+      2606 +          () => context.read<JobsBloc>().add(JobParseDescript
+           +ionRequested(job.id)),                                       
+      2607 +        ),                                                   
+      2608 +        const SizedBox(height: 8),                           
+      2609 +        _buildAIButton(                                      
+      2610 +          context,                                           
+      2611 +          'Generate Resume',                                 
+      2612 +          Icons.description,                                 
+      2613 +          () => context.read<JobsBloc>().add(JobGenerateResum
+           +eRequested(job.id)),                                         
+      2614 +        ),                                                   
+      2615 +        const SizedBox(height: 8),                           
+      2616 +        _buildAIButton(                                      
+      2617 +          context,                                           
+      2618 +          'Run ATS Analysis',                                
+      2619 +          Icons.analytics,                                   
+      2620 +          () => context.read<JobsBloc>().add(JobAnalyzeAtsReq
+           +uested(job.id)),                                             
+      2621 +        ),                                                   
+      2622 +        const SizedBox(height: 8),                           
+      2623 +        _buildAIButton(                                      
+      2624 +          context,                                           
+      2625 +          'Run Tech Fit Analysis',                           
+      2626 +          Icons.psychology,                                  
+      2627 +          () => context.read<JobsBloc>().add(JobAnalyzeTechFi
+           +tRequested(job.id)),                                         
+      2628 +        ),                                                   
+      2629 +      ],                                                     
+      2630 +    );                                                       
+      2631 +  }                                                          
+      2632 +                                                             
+      2633 +  Widget _buildAIButton(                                     
+      2634 +    BuildContext context,                                    
+      2635 +    String label,                                            
+      2636 +    IconData icon,                                           
+      2637 +    VoidCallback onPressed,                                  
+      2638 +  ) {                                                        
+      2639 +    return SizedBox(                                         
+      2640 +      width: double.infinity,                                
+      2641 +      child: OutlinedButton.icon(                            
+      2642 +        onPressed: onPressed,                                
+      2643 +        icon: Icon(icon),                                    
+      2644 +        label: Text(label),                                  
+      2645 +      ),                                                     
+      2646 +    );                                                       
+      2647 +  }                                                          
+      2648 +                                                             
+      2649 +  void _showDeleteDialog(BuildContext context) {             
+      2650 +    showDialog(                                              
+      2651 +      context: context,                                      
+      2652 +      builder: (ctx) => AlertDialog(                         
+      2653 +        title: const Text('Delete Job'),                     
+      2654 +        content: const Text('Are you sure you want to delete 
+           +this job?'),                                                 
+      2655 +        actions: [                                           
+      2656 +          TextButton(                                        
+      2657 +            onPressed: () => Navigator.pop(ctx),             
+      2658 +            child: const Text('Cancel'),                     
+      2659 +          ),                                                 
+      2660 +          TextButton(                                        
+      2661 +            onPressed: () {                                  
+      2662 +              context.read<JobsBloc>().add(JobDeleteRequested
+           +(jobId));                                                    
+      2663 +              Navigator.pop(ctx);                            
+      2664 +              Navigator.pop(context);                        
+      2665 +            },                                               
+      2666 +            child: const Text('Delete', style: TextStyle(colo
+           +r: AppColors.error)),                                        
+      2667 +          ),                                                 
+      2668 +        ],                                                   
+      2669 +      ),                                                     
+      2670 +    );                                                       
+      2671 +  }                                                          
+      2672 +}                                                            
+      2673 +```                                                          
+      2674 +                                                             
+      2675 +- [ ] **Step 2: Commit**                                     
+      2676 +                                                             
+      2677 +```bash                                                      
+      2678 +git add lib/features/jobs/                                   
+      2679 +git commit -m "feat: add job detail screen with AI actions"  
+      2680 +```                                                          
+      2681 +                                                             
+      2682 +---                                                          
+      2683 +                                                             
+      2684 +### Task 10: Resumes Feature                                 
+      2685 +                                                             
+      2686 +**Files:**                                                   
+      2687 +- Create: `lib/services/cloud/google_drive_service.dart`     
+      2688 +- Create: `lib/services/cloud/onedrive_service.dart`         
+      2689 +- Create: `lib/features/resumes/resumes_screen.dart`         
+      2690 +                                                             
+      2691 +- [ ] **Step 1: Create google_drive_service.dart**           
+      2692 +                                                             
+      2693 +```dart                                                      
+      2694 +import 'package:googleapis/drive/v3.dart' as drive;          
+      2695 +import 'package:http/http.dart' as http;                     
+      2696 +                                                             
+      2697 +class GoogleDriveService {                                   
+      2698 +  // Requires OAuth2 token from Google Sign-In               
+      2699 +  Future<List<DriveFile>> pickFile(String accessToken) async 
+           +{                                                            
+      2700 +    final client = http.Client();                            
+      2701 +    final driveApi = drive.DriveApi(client);                 
+      2702 +                                                             
+      2703 +    // Get files with specific MIME types (documents, PDFs)  
+      2704 +    final files = await driveApi.files.list(                 
+      2705 +      q: "mimeType='application/pdf' or mimeType='application
+           +/vnd.google-apps.document'",                                 
+      2706 +      spaces: 'drive',                                       
+      2707 +    );                                                       
+      2708 +                                                             
+      2709 +    return files.files ?? [];                                
+      2710 +  }                                                          
+      2711 +                                                             
+      2712 +  Future<List<int>?> downloadFile(String accessToken, String 
+           +fileId) async {                                              
+      2713 +    final client = http.Client();                            
+      2714 +    final driveApi = drive.DriveApi(client);                 
+      2715 +                                                             
+      2716 +    final response = await driveApi.files.get(fileId, downloa
+           +dOptions: drive.DownloadOptions.downloadMedia);              
+      2717 +    return (response as List<int>?)                          
+      2718 +```                                                          
+      2719 +                                                             
+      2720 +- [ ] **Step 2: Create onedrive_service.dart**               
+      2721 +                                                             
+      2722 +```dart                                                      
+      2723 +import 'dart:convert';                                       
+      2724 +import 'package:http/http.dart' as http;                     
+      2725 +                                                             
+      2726 +class OneDriveService {                                      
+      2727 +  static const String graphEndpoint = 'https://graph.microsof
+           +t.com/v1.0';                                                 
+      2728 +                                                             
+      2729 +  Future<List<OneDriveItem>> pickFile(String accessToken) asy
+           +nc {                                                         
+      2730 +    final response = await http.get(                         
+      2731 +      Uri.parse('$graphEndpoint/me/drive/root/children'),    
+      2732 +      headers: {'Authorization': 'Bearer $accessToken'},     
+      2733 +    );                                                       
+      2734 +                                                             
+      2735 +    if (response.statusCode == 200) {                        
+      2736 +      final data = json.decode(response.body);               
+      2737 +      final items = data['value'] as List;                   
+      2738 +      return items                                           
+      2739 +          .where((item) => item['file'] != null)             
+      2740 +          .map((item) => OneDriveItem.fromJson(item))        
+      2741 +          .toList();                                         
+      2742 +    }                                                        
+      2743 +    return [];                                               
+      2744 +  }                                                          
+      2745 +}                                                            
+      2746 +                                                             
+      2747 +class OneDriveItem {                                         
+      2748 +  final String id;                                           
+      2749 +  final String name;                                         
+      2750 +  final String? webUrl;                                      
+      2751 +                                                             
+      2752 +  OneDriveItem({required this.id, required this.name, this.we
+           +bUrl});                                                      
+      2753 +                                                             
+      2754 +  factory OneDriveItem.fromJson(Map<String, dynamic> json) { 
+      2755 +    return OneDriveItem(                                     
+      2756 +      id: json['id'],                                        
+      2757 +      name: json['name'],                                    
+      2758 +      webUrl: json['webUrl'],                                
+      2759 +    );                                                       
+      2760 +  }                                                          
+      2761 +}                                                            
+      2762 +```                                                          
+      2763 +                                                             
+      2764 +- [ ] **Step 3: Create resumes_screen.dart**                 
+      2765 +                                                             
+      2766 +```dart                                                      
+      2767 +import 'package:flutter/material.dart';                      
+      2768 +import 'package:file_picker/file_picker.dart';               
+      2769 +import '../../../core/theme/app_theme.dart';                 
+      2770 +import '../../../services/cloud/google_drive_service.dart';  
+      2771 +import '../../../services/cloud/onedrive_service.dart';      
+      2772 +                                                             
+      2773 +class ResumesScreen extends StatelessWidget {                
+      2774 +  const ResumesScreen({super.key});                          
+      2775 +                                                             
+      2776 +  @override                                                  
+      2777 +  Widget build(BuildContext context) {                       
+      2778 +    return Scaffold(                                         
+      2779 +      appBar: AppBar(title: const Text('Resumes')),          
+      2780 +      body: GridView.builder(                                
+      2781 +        padding: const EdgeInsets.all(16),                   
+      2782 +        gridDelegate: const SliverGridDelegateWithFixedCrossA
+           +xisCount(                                                    
+      2783 +          crossAxisCount: 2,                                 
+      2784 +          crossAxisSpacing: 12,                              
+      2785 +          mainAxisSpacing: 12,                               
+      2786 +        ),                                                   
+      2787 +        itemCount: 0, // TODO: Load from state               
+      2788 +        itemBuilder: (context, index) {                      
+      2789 +          return Card(                                       
+      2790 +            child: InkWell(                                  
+      2791 +              onTap: () {},                                  
+      2792 +              child: const Center(child: Icon(Icons.descripti
+           +on, size: 48)),                                              
+      2793 +            ),                                               
+      2794 +          );                                                 
+      2795 +        },                                                   
+      2796 +      ),                                                     
+      2797 +      floatingActionButton: FloatingActionButton(            
+      2798 +        onPressed: () => _showUploadOptions(context),        
+      2799 +        backgroundColor: AppColors.accent,                   
+      2800 +        child: const Icon(Icons.add, color: Colors.white),   
+      2801 +      ),                                                     
+      2802 +    );                                                       
+      2803 +  }                                                          
+      2804 +                                                             
+      2805 +  void _showUploadOptions(BuildContext context) {            
+      2806 +    showModalBottomSheet(                                    
+      2807 +      context: context,                                      
+      2808 +      builder: (ctx) => ListView(                            
+      2809 +        shrinkWrap: true,                                    
+      2810 +        children: [                                          
+      2811 +          ListTile(                                          
+      2812 +            leading: const Icon(Icons.phone_android),        
+      2813 +            title: const Text('Upload from Device'),         
+      2814 +            onTap: () {                                      
+      2815 +              Navigator.pop(ctx);                            
+      2816 +              _pickFromDevice();                             
+      2817 +            },                                               
+      2818 +          ),                                                 
+      2819 +          ListTile(                                          
+      2820 +            leading: const Icon(Icons.cloud),                
+      2821 +            title: const Text('Google Drive'),               
+      2822 +            onTap: () {                                      
+      2823 +              Navigator.pop(ctx);                            
+      2824 +              _pickFromGoogleDrive();                        
+      2825 +            },                                               
+      2826 +          ),                                                 
+      2827 +          ListTile(                                          
+      2828 +            leading: const Icon(Icons.cloud_circle),         
+      2829 +            title: const Text('OneDrive'),                   
+      2830 +            onTap: () {                                      
+      2831 +              Navigator.pop(ctx);                            
+      2832 +              _pickFromOneDrive();                           
+      2833 +            },                                               
+      2834 +          ),                                                 
+      2835 +        ],                                                   
+      2836 +      ),                                                     
+      2837 +    );                                                       
+      2838 +  }                                                          
+      2839 +                                                             
+      2840 +  Future<void> _pickFromDevice() async {                     
+      2841 +    final result = await FilePicker.platform.pickFiles(      
+      2842 +      type: FileType.custom,                                 
+      2843 +      allowedExtensions: ['pdf', 'doc', 'docx'],             
+      2844 +    );                                                       
+      2845 +    // TODO: Upload to server                                
+      2846 +  }                                                          
+      2847 +                                                             
+      2848 +  Future<void> _pickFromGoogleDrive() async {                
+      2849 +    final service = GoogleDriveService();                    
+      2850 +    // TODO: Implement OAuth flow and file picking           
+      2851 +  }                                                          
+      2852 +                                                             
+      2853 +  Future<void> _pickFromOneDrive() async {                   
+      2854 +    final service = OneDriveService();                       
+      2855 +    // TODO: Implement OAuth flow and file picking           
+      2856 +  }                                                          
+      2857 +}                                                            
+      2858 +```                                                          
+      2859 +                                                             
+      2860 +- [ ] **Step 4: Commit**                                     
+      2861 +                                                             
+      2862 +```bash                                                      
+      2863 +git add lib/features/resumes/ lib/services/cloud/            
+      2864 +git commit -m "feat: add resumes feature with cloud storage" 
+      2865 +```                                                          
+      2866 +                                                             
+      2867 +---                                                          
+      2868 +                                                             
+      2869 +### Task 11: Subscription & Paywall                          
+      2870 +                                                             
+      2871 +**Files:**                                                   
+      2872 +- Create: `lib/features/subscription/paywall_dialog.dart`    
+      2873 +- Create: `lib/features/subscription/subscription_checker.dar
+           +t`                                                           
+      2874 +                                                             
+      2875 +- [ ] **Step 1: Create subscription_checker.dart**           
+      2876 +                                                             
+      2877 +```dart                                                      
+      2878 +import '../data/models/subscription_model.dart';             
+      2879 +import '../data/sources/api_client.dart';                    
+      2880 +                                                             
+      2881 +class SubscriptionChecker {                                  
+      2882 +  final ApiClient _apiClient;                                
+      2883 +                                                             
+      2884 +  SubscriptionChecker({ApiClient? apiClient}) : _apiClient = 
+           +apiClient ?? ApiClient();                                    
+      2885 +                                                             
+      2886 +  Future<SubscriptionModel> checkSubscription() async {      
+      2887 +    try {                                                    
+      2888 +      final response = await _apiClient.get('/api/subscriptio
+           +n');                                                         
+      2889 +      return SubscriptionModel.fromJson(response.data);      
+      2890 +    } catch (e) {                                            
+      2891 +      // If endpoint doesn't exist, assume free tier         
+      2892 +      return const SubscriptionModel(isActive: false);       
+      2893 +    }                                                        
+      2894 +  }                                                          
+      2895 +                                                             
+      2896 +  bool canAccessAI(SubscriptionModel sub) => sub.hasFullAcces
+           +s;                                                           
+      2897 +  bool canUseCloudStorage(SubscriptionModel sub) => sub.hasFu
+           +llAccess;                                                    
+      2898 +  bool canCreateJob(int currentJobCount, SubscriptionModel su
+           +b) {                                                         
+      2899 +    if (sub.hasFullAccess) return true;                      
+      2900 +    return currentJobCount < 5; // Free tier limit           
+      2901 +  }                                                          
+      2902 +}                                                            
+      2903 +```                                                          
+      2904 +                                                             
+      2905 +- [ ] **Step 2: Create paywall_dialog.dart**                 
+      2906 +                                                             
+      2907 +```dart                                                      
+      2908 +import 'package:flutter/material.dart';                      
+      2909 +import 'package:flutter_stripe/flutter_stripe.dart';         
+      2910 +import '../../core/theme/app_theme.dart';                    
+      2911 +                                                             
+      2912 +class PaywallDialog extends StatelessWidget {                
+      2913 +  final String featureName;                                  
+      2914 +  final VoidCallback onSubscribe;                            
+      2915 +  final VoidCallback onDismiss;                              
+      2916 +                                                             
+      2917 +  const PaywallDialog({                                      
+      2918 +    super.key,                                               
+      2919 +    required this.featureName,                               
+      2920 +    required this.onSubscribe,                               
+      2921 +    required this.onDismiss,                                 
+      2922 +  });                                                        
+      2923 +                                                             
+      2924 +  @override                                                  
+      2925 +  Widget build(BuildContext context) {                       
+      2926 +    return AlertDialog(                                      
+      2927 +      title: const Text('Upgrade to Pro'),                   
+      2928 +      content: Column(                                       
+      2929 +        mainAxisSize: MainAxisSize.min,                      
+      2930 +        children: [                                          
+      2931 +          const Icon(Icons.star, size: 64, color: AppColors.a
+           +ccent),                                                      
+      2932 +          const SizedBox(height: 16),                        
+      2933 +          Text(                                              
+      2934 +            'Unlock $featureName',                           
+      2935 +            style: AppTypography.h3,                         
+      2936 +          ),                                                 
+      2937 +          const SizedBox(height: 8),                         
+      2938 +          Text(                                              
+      2939 +            'Get unlimited jobs, AI features, and cloud stora
+           +ge for just \$1/month.',                                     
+      2940 +            style: AppTypography.body2,                      
+      2941 +            textAlign: TextAlign.center,                     
+      2942 +          ),                                                 
+      2943 +          const SizedBox(height: 16),                        
+      2944 +          const Text('7-day free trial'),                    
+      2945 +        ],                                                   
+      2946 +      ),                                                     
+      2947 +      actions: [                                             
+      2948 +        TextButton(onPressed: onDismiss, child: const Text('M
+           +aybe Later')),                                               
+      2949 +        ElevatedButton(                                      
+      2950 +          onPressed: onSubscribe,                            
+      2951 +          child: const Text('Start Free Trial'),             
+      2952 +        ),                                                   
+      2953 +      ],                                                     
+      2954 +    );                                                       
+      2955 +  }                                                          
+      2956 +}                                                            
+      2957 +```                                                          
+      2958 +                                                             
+      2959 +- [ ] **Step 3: Commit**                                     
+      2960 +                                                             
+      2961 +```bash                                                      
+      2962 +git add lib/features/subscription/                           
+      2963 +git commit -m "feat: add subscription and paywall"           
+      2964 +```                                                          
+      2965 +                                                             
+      2966 +---                                                          
+      2967 +                                                             
+      2968  ### Task 12: Offline Support
+      2134 -- Job caching in Hive                                        
+      2135 -- Offline operation queue                                    
+      2136 -- Sync on reconnect                                          
+      2969  
+      2970 +- [ ] **Step 1: Create offline_sync_service.dart**           
+      2971 +                                                             
+      2972 +```dart                                                      
+      2973 +import 'dart:async';                                         
+      2974 +import 'package:connectivity_plus/connectivity_plus.dart';   
+      2975 +import '../data/sources/local_storage.dart';                 
+      2976 +import '../data/sources/api_client.dart';                    
+      2977 +                                                             
+      2978 +class OfflineSyncService {                                   
+      2979 +  final LocalStorage _storage;                               
+      2980 +  final ApiClient _apiClient;                                
+      2981 +  final Connectivity _connectivity = Connectivity();         
+      2982 +                                                             
+      2983 +  OfflineSyncService({required LocalStorage storage, required
+           + ApiClient apiClient})                                       
+      2984 +      : _storage = storage,                                  
+      2985 +        _apiClient = apiClient;                              
+      2986 +                                                             
+      2987 +  Future<void> init() async {                                
+      2988 +    _connectivity.onConnectivityChanged.listen((results) {   
+      2989 +      if (results.isNotEmpty && results.first != Connectivity
+           +Result.none) {                                               
+      2990 +        syncPendingOperations();                             
+      2991 +      }                                                      
+      2992 +    });                                                      
+      2993 +  }                                                          
+      2994 +                                                             
+      2995 +  Future<void> queueOperation(Map<String, dynamic> operation)
+           + async {                                                     
+      2996 +    await _storage.addPendingOperation({                     
+      2997 +      ...operation,                                          
+      2998 +      'timestamp': DateTime.now().toIso8601String(),         
+      2999 +      'retries': 0,                                          
+      3000 +    });                                                      
+      3001 +  }                                                          
+      3002 +                                                             
+      3003 +  Future<void> syncPendingOperations() async {               
+      3004 +    final operations = await _storage.getPendingOperations();
+      3005 +                                                             
+      3006 +    for (final op in operations) {                           
+      3007 +      try {                                                  
+      3008 +        await _processOperation(op);                         
+      3009 +        // Remove from queue on success                      
+      3010 +      } catch (e) {                                          
+      3011 +        final retries = (op['retries'] ?? 0) + 1;            
+      3012 +        if (retries >= 3) {                                  
+      3013 +          // Mark as failed                                  
+      3014 +        } else {                                             
+      3015 +          // Update retry count                              
+      3016 +        }                                                    
+      3017 +      }                                                      
+      3018 +    }                                                        
+      3019 +  }                                                          
+      3020 +                                                             
+      3021 +  Future<void> _processOperation(Map<String, dynamic> op) asy
+           +nc {                                                         
+      3022 +    final type = op['type'];                                 
+      3023 +    final endpoint = op['endpoint'];                         
+      3024 +    final data = op['data'];                                 
+      3025 +                                                             
+      3026 +    switch (type) {                                          
+      3027 +      case 'create':                                         
+      3028 +        await _apiClient.post(endpoint, data: data);         
+      3029 +        break;                                               
+      3030 +      case 'update':                                         
+      3031 +        await _apiClient.put(endpoint, data: data);          
+      3032 +        break;                                               
+      3033 +      case 'delete':                                         
+      3034 +        await _apiClient.delete(endpoint, data: data);       
+      3035 +        break;                                               
+      3036 +    }                                                        
+      3037 +  }                                                          
+      3038 +}                                                            
+      3039 +```                                                          
+      3040 +                                                             
+      3041 +- [ ] **Step 2: Commit**                                     
+      3042 +                                                             
+      3043 +```bash                                                      
+      3044 +git add lib/services/                                        
+      3045 +git commit -m "feat: add offline sync service"               
+      3046 +```                                                          
+      3047 +                                                             
+      3048 +---                                                          
+      3049 +                                                             
+      3050 +### Task 13: Platform Configuration                          
+      3051 +                                                             
+      3052 +- Android manifest permissions                               
+      3053 +- iOS Info.plist configurations                              
+      3054 +- App icons and splash screens                               
+      3055 +- Build configurations for release                           
+      3056 +                                                             
+      3057  ### Task 13: Platform Specific
+      3058  - Android configuration (permissions, app icons)
+      3059  - iOS configuration (info.plist, capabilities)
+
+⏺ Bash(git add docs/superpowers/plans/2026-03-18-jobsync-flutter-plan.md && git
+      commit -m "$(cat <<'EOF'
+      Update plan with detailed implementation steps for all tasks…)
+  ⎿  [flutter-mobile 9146174] Update plan with detailed implementation step
+     s for all tasks
+      1 file changed, 3071 insertions(+)
+     … +2 lines (ctrl+o to expand)
+
+⏺ Agent(Final review of Flutter plan)
+  ⎿  Done (11 tool uses · 47.3k tokens · 52s)
+  (ctrl+o to expand)
+
+⏺ Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+⏺ Update(docs/superpowers/plans/2026-03-18-jobsync-flutter-plan.md)
+  ⎿  Added 33 lines, removed 7 lines
+      3049  
+      3050  ### Task 13: Platform Configuration
+      3051  
+      3052 -- Android manifest permissions                               
+      3053 -- iOS Info.plist configurations                              
+      3054 -- App icons and splash screens                               
+      3055 -- Build configurations for release                           
+      3052 +**Files:**                                                   
+      3053 +- Modify: `android/app/src/main/AndroidManifest.xml`         
+      3054 +- Modify: `ios/Runner/Info.plist`                            
+      3055  
+      3057 -### Task 13: Platform Specific                               
+      3058 -- Android configuration (permissions, app icons)             
+      3059 -- iOS configuration (info.plist, capabilities)               
+      3056 +- [ ] **Step 1: Configure Android permissions**              
+      3057  
+      3058 +```xml                                                       
+      3059 +<manifest xmlns:android="http://schemas.android.com/apk/res/a
+           +ndroid">                                                     
+      3060 +    <!-- Internet for API calls -->                          
+      3061 +    <uses-permission android:name="android.permission.INTERNE
+           +T"/>                                                         
+      3062 +    <!-- Network state for offline detection -->             
+      3063 +    <uses-permission android:name="android.permission.ACCESS_
+           +NETWORK_STATE"/>                                             
+      3064 +    <!-- Read storage for file picking -->                   
+      3065 +    <uses-permission android:name="android.permission.READ_EX
+           +TERNAL_STORAGE"/>                                            
+      3066 +</manifest>                                                  
+      3067 +```                                                          
+      3068 +                                                             
+      3069 +- [ ] **Step 2: Configure iOS Info.plist**                   
+      3070 +                                                             
+      3071 +```xml                                                       
+      3072 +<key>NSAppTransportSecurity</key>                            
+      3073 +<dict>                                                       
+      3074 +    <key>NSAllowsArbitraryLoads</key>                        
+      3075 +    <true/>                                                  
+      3076 +</dict>                                                      
+      3077 +<key>NSPhotoLibraryUsageDescription</key>                    
+      3078 +<string>Access photos to upload resumes</string>             
+      3079 +```                                                          
+      3080 +                                                             
+      3081 +- [ ] **Step 3: Commit**                                     
+      3082 +                                                             
+      3083 +```bash                                                      
+      3084 +git commit -m "chore: add platform configurations"           
+      3085 +```                                                          
+      3086 +                                                             
+      3087  ---
+      3088  
+      3089  ## Plan Review
+
+⏺ Bash(git add docs/superpowers/plans/2026-03-18-jobsync-flutter-plan.md && git
+      commit -m "fix: consolidate duplicate Task 13 in plan")
+  ⎿  [flutter-mobile 236835a] fix: consolidate duplicate Task 13 in plan
+      1 file changed, 34 insertions(+), 8 deletions(-)
+
+⏺ Plan complete and saved to
+  docs/superpowers/plans/2026-03-18-jobsync-flutter-plan.md.
+
+  Two execution options:
+
+  1. Subagent-Driven (recommended) - I dispatch a fresh subagent per task,
+  review between tasks, fast iteration
+  2. Inline Execution - Execute tasks in this session using executing-plans,
+  batch execution with checkpoints
+
+  Which approach?
+
+✻ Cogitated for 8m 47s
+
+❯ /model                                                                        
+  ⎿  Kept model as minimax-m2.5:cloud
+
+❯ /cost                                                                         
+  ⎿  Total cost:            $25.77 (costs may be inaccurate due to usage of 
+     unknown models)
+     Total duration (API):  15m 58s
+     Total duration (wall): 52m 54s
+     Total code changes:    3590 lines added, 49 lines removed
+     Usage by model:
+       minimax-m2.5:cloud:  4.9m input, 46.6k output, 0 cache read, 0 cache 
+     write ($25.77)
