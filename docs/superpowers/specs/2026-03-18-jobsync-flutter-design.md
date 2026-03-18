@@ -26,9 +26,10 @@ Transition the existing JobSync web application to a Flutter mobile app for Andr
 ### Components
 
 1. **Mobile Client**: Flutter app connecting to existing API endpoints
-2. **Existing Backend**: FastAPI at port 8000 (no changes required)
+2. **Existing Backend**: FastAPI at port 8000 (most features work without changes)
 3. **Existing AI Service**: Ollama integration at port 8001 (no changes required)
 4. **Existing Database**: MariaDB (no changes required)
+5. **Backend Changes Required**: For subscription/Stripe features (see Section 7)
 
 ### API Integration
 
@@ -297,9 +298,9 @@ dependencies:
   hive_flutter: ^1.1.0
   shared_preferences: ^2.2.2
 
-  # Authentication
+  # Authentication (OAuth2)
   flutter_secure_storage: ^9.0.0
-  google_sign_in: ^6.2.1
+  google_sign_in: ^6.2.1  # For native Google OAuth, or use url_launcher for web-based flow
 
   # File Picking
   file_picker: ^6.1.1
@@ -364,6 +365,11 @@ lib/
 
 ## Monetization Details
 
+> **Backend Changes Required**: The following features require backend additions:
+> - Stripe webhook handlers for subscription lifecycle
+> - Subscription status endpoint (returns `is_active` and `grace_period_until`)
+> - Integration with your Stripe account
+
 ### Stripe Integration
 
 - **Product**: $1/month subscription
@@ -386,7 +392,7 @@ lib/
 #### Grace Period Implementation
 
 - **Backend-driven**: The API should return subscription status including grace period info
-- **Expected API response**: `{ "is_active": true/false, "grace_period_until": "2024-01-15T00:00:00Z" }`
+- **Expected API response**: `{ "is_active": true/false, "grace_period_until": "2026-03-25T00:00:00Z" }`
 - **Client logic**: If `grace_period_until` is in the future, allow full access
 - **If no grace period from API**: Fall back to 3-day local grace period (stored when payment fails)
 
