@@ -3049,14 +3049,40 @@ git commit -m "feat: add offline sync service"
 
 ### Task 13: Platform Configuration
 
-- Android manifest permissions
-- iOS Info.plist configurations
-- App icons and splash screens
-- Build configurations for release
+**Files:**
+- Modify: `android/app/src/main/AndroidManifest.xml`
+- Modify: `ios/Runner/Info.plist`
 
-### Task 13: Platform Specific
-- Android configuration (permissions, app icons)
-- iOS configuration (info.plist, capabilities)
+- [ ] **Step 1: Configure Android permissions**
+
+```xml
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Internet for API calls -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Network state for offline detection -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <!-- Read storage for file picking -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+</manifest>
+```
+
+- [ ] **Step 2: Configure iOS Info.plist**
+
+```xml
+<key>NSAppTransportSecurity</key>
+<dict>
+    <key>NSAllowsArbitraryLoads</key>
+    <true/>
+</dict>
+<key>NSPhotoLibraryUsageDescription</key>
+<string>Access photos to upload resumes</string>
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+git commit -m "chore: add platform configurations"
+```
 
 ---
 
