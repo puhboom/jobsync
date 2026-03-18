@@ -124,26 +124,46 @@ async def generate_resume(request: ResumeGenerateRequest):
         prompt_parts.append("")
 
     if request.example_resume:
-        prompt_parts.append(
-            "REFERENCE EXAMPLE RESUME (use this style and content as inspiration):"
+        prompt_parts.extend(
+            [
+                "CANDIDATE'S COMPLETE RESUME (THIS IS YOUR RESUME - USE YOUR ACTUAL INFORMATION FROM THIS):",
+                request.example_resume,
+                "",
+                "CRITICAL - YOU MUST PRESERVE EVERYTHING:",
+                "- Include EVERY SINGLE job/role from this resume - do NOT skip, merge, truncate, or summarize ANY positions",
+                "- Include ALL work experience entries, even if there are many roles",
+                "- Include the EXACT name, email, phone, and location from this resume",
+                "- Include your EXACT LinkedIn URL if present",
+                "- Include ALL education entries",
+                "- Include ALL skills and certifications",
+                "- The output resume MUST be complete with all positions listed",
+                "",
+            ]
         )
-        prompt_parts.append(request.example_resume)
-        prompt_parts.append("")
 
     if request.template_format:
-        prompt_parts.append("TEMPLATE FORMAT (follow this structure):")
+        prompt_parts.append(
+            "RESUME TEMPLATE (follow this exact structure and formatting):"
+        )
         prompt_parts.append(request.template_format)
         prompt_parts.append("")
 
     prompt_parts.extend(
         [
-            "Generate a complete, professional resume that:",
-            "1. Matches the job requirements closely",
-            "2. Uses relevant keywords from the job description",
-            "3. Highlights relevant experience and skills",
-            "4. Is formatted clearly with sections for Summary, Experience, Education, and Skills",
+            "Generate a complete, detailed resume that:",
+            "1. Includes ALL of your work experience - every single position must be present",
+            "2. Uses YOUR EXACT personal information (name, email, phone, location, LinkedIn) from your resume",
+            "3. Matches the job requirements closely by emphasizing relevant skills in each role",
+            "4. Incorporates relevant keywords naturally throughout",
+            "5. Is formatted clearly with sections for Summary, Experience, Education, and Skills",
             "",
-            "Write the complete resume now:",
+            "ABSOLUTE REQUIREMENTS:",
+            "- DO NOT truncate, summarize, or omit ANY work experience entries",
+            "- DO NOT invent or change personal information",
+            "- Write a COMPLETE resume including ALL positions from your background",
+            "- It is better to be comprehensive than brief",
+            "",
+            "Write the complete resume now (include ALL positions):",
         ]
     )
 
