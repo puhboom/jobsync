@@ -34,12 +34,13 @@ services:
       - DATABASE_USER=${DATABASE_USER}
       - DATABASE_PASSWORD=${DATABASE_PASSWORD}
       - AI_SERVICE_URL=http://ai-service:8001
-      - CORS_ORIGINS=http://localhost:5005,http://frontend:5000
+      - CORS_ORIGINS=https://jobsync.ronning.systems,http://frontend:5000
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - LINKEDIN_CLIENT_ID=${LINKEDIN_CLIENT_ID}
       - LINKEDIN_CLIENT_SECRET=${LINKEDIN_CLIENT_SECRET}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5000}
+      - BACKEND_URL=${BACKEND_URL:-https://jobsync.ronning.systems}
     ports:
       - "8000:8000"
     depends_on:

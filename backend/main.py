@@ -7,7 +7,7 @@ from io import BytesIO
 
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, HTMLResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from pydantic import BaseModel
@@ -74,6 +74,84 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "healthy"}
+
+
+@app.get("/oauth/{provider}")
+def oauth_callback(provider: str, code: str = None, state: str = None):
+    """
+    Handle OAuth callback from Google/LinkedIn.
+    Redirects to the mobile app via custom URL scheme.
+    """
+    import urllib.parse
+
+    # Build the redirect URL for the mobile app
+    mobile_scheme = "jobsync"
+
+    # Build query params to pass back to the app
+    params = {}
+    if code:
+        params["code"] = code
+    if state:
+        params["state"] = state
+    params["provider"] = provider
+
+    query_string = urllib.parse.urlencode(params)
+    redirect_url = f"{mobile_scheme}://oauth/callback?{query_string}"
+
+    # Return an HTML page that redirects to the mobile app
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="refresh" content="0;url={redirect_url}">
+    <script>
+        window.location.href = "{redirect_url}";
+    </script>
+</head>
+<body>
+    <p>Redirecting to JobSync app...</p>
+    <p>If nothing happens, <a href="{redirect_url}>open JobSync</a></p>
+</body>
+</html>"""
+
+    return HTMLResponse(content=html, media_type="text/html")
+
+
+@app.get("/login")
+def login(provider: str = "google"):
+    """Initiate OAuth login - returns the authorization URL for the frontend to redirect to."""
+    # Get the backend URL - needed for OAuth callback redirect
+    backend_url = os.getenv("BACKEND_URL", "https://jobsync.ronning.systems")
+    redirect_uri = f"{backend_url}/oauth/{provider}"
+
+    if provider == "google":
+        client_id = os.getenv("GOOGLE_CLIENT_ID", "")
+
+        import urllib.parse
+        params = urllib.parse.urlencode({
+            "client_id": client_id,
+            "redirect_uri": redirect_uri,
+            "response_type": "code",
+            "scope": "openid email profile",
+            "access_type": "offline",
+        })
+        auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{params}"
+
+        return {"authorization_url": auth_url}
+    elif provider == "linkedin":
+        client_id = os.getenv("LINKEDIN_CLIENT_ID", "")
+
+        import urllib.parse
+        params = urllib.parse.urlencode({
+            "client_id": client_id,
+            "redirect_uri": redirect_uri,
+            "response_type": "code",
+            "scope": "openid email profile",
+        })
+        auth_url = f"https://www.linkedin.com/oauth/v2/authorization?{params}"
+
+        return {"authorization_url": auth_url}
+    else:
+        raise HTTPException(status_code=400, detail="Invalid provider")
 
 
 @app.get("/api/dashboard/stats", response_model=DashboardStats)
