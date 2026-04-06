@@ -1,4 +1,20 @@
-version: '3.8'
+# version: '3.8'
+
+# JobSync - Job Application Tracking System
+# Production-ready Docker Compose configuration
+# 
+# Required environment variables (see .env.example):
+#   - DB_ROOT_PASSWORD: MariaDB root password
+#   - DATABASE_NAME: Database name (default: jobsync)
+#   - DATABASE_USER: Database user (default: jobsync)
+#   - DATABASE_PASSWORD: Database password
+#   - GOOGLE_CLIENT_ID: OAuth Google client ID
+#   - GOOGLE_CLIENT_SECRET: OAuth Google client secret
+#   - LINKEDIN_CLIENT_ID: OAuth LinkedIn client ID
+#   - LINKEDIN_CLIENT_SECRET: OAuth LinkedIn client secret
+#   - BACKEND_URL: Public URL for backend (e.g., https://jobsync.ronning.systems)
+#   - OLLAMA_HOST: Ollama server address (default: host.docker.internal:11434)
+#   - OLLAMA_MODEL: Model to use (default: llama3.2)
 
 services:
   db:
@@ -6,11 +22,11 @@ services:
     container_name: jobsync_db
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${DATABASE_NAME}
-      MYSQL_USER: ${DATABASE_USER}
+      MYSQL_DATABASE: ${DATABASE_NAME:-jobsync}
+      MYSQL_USER: ${DATABASE_USER:-jobsync}
       MYSQL_PASSWORD: ${DATABASE_PASSWORD}
     volumes:
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
       - mariadb_data:/var/lib/mysql
     ports:
       - "${DATABASE_PORT:-3306}:3306"
@@ -21,6 +37,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   backend:
     build:
@@ -30,16 +47,16 @@ services:
     environment:
       - DATABASE_SERVER=db
       - DATABASE_PORT=3306
-      - DATABASE_NAME=${DATABASE_NAME}
-      - DATABASE_USER=${DATABASE_USER}
+      - DATABASE_NAME=${DATABASE_NAME:-jobsync}
+      - DATABASE_USER=${DATABASE_USER:-jobsync}
       - DATABASE_PASSWORD=${DATABASE_PASSWORD}
       - AI_SERVICE_URL=http://ai-service:8001
-      - CORS_ORIGINS=https://jobsync.ronning.systems,http://frontend:5000
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://jobsync.ronning.systems}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - LINKEDIN_CLIENT_ID=${LINKEDIN_CLIENT_ID}
       - LINKEDIN_CLIENT_SECRET=${LINKEDIN_CLIENT_SECRET}
-      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5000}
+      - FRONTEND_URL=${BACKEND_URL:-https://jobsync.ronning.systems}
       - BACKEND_URL=${BACKEND_URL:-https://jobsync.ronning.systems}
     ports:
       - "8000:8000"
@@ -50,33 +67,7 @@ services:
         condition: service_started
     networks:
       - jobsync_network
-    volumes:
-      - ./backend:/app
-    restart: on-failure
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: jobsync_frontend
-    environment:
-      - BACKEND_URL=http://backend:8000
-      - FLASK_ENV=development
-      - FLASK_DEBUG=1
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      - LINKEDIN_CLIENT_ID=${LINKEDIN_CLIENT_ID}
-      - LINKEDIN_CLIENT_SECRET=${LINKEDIN_CLIENT_SECRET}
-      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5000}
-    ports:
-      - "5005:5000"
-    depends_on:
-      - backend
-    networks:
-      - jobsync_network
-    volumes:
-      - ./frontend:/app
-    restart: on-failure
+    restart: unless-stopped
 
   ai-service:
     build:
@@ -87,17 +78,17 @@ services:
       - OLLAMA_HOST=${OLLAMA_HOST:-host.docker.internal:11434}
       - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2}
     ports:
-      - "8001:8001"
+      - "127.0.0.1:8001:8001"
     networks:
       - jobsync_network
-    volumes:
-      - ./ai-service:/app
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+volumes:
+  mariadb_data:
+    driver: local
 
 networks:
   jobsync_network:
     driver: bridge
-
-volumes:
-  mariadb_data:
