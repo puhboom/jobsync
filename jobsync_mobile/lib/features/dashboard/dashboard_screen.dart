@@ -3,8 +3,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../data/models/job_model.dart';
+import '../../data/models/subscription_model.dart';
+import '../../features/subscription/bloc/subscription_bloc.dart';
+import '../../features/subscription/bloc/subscription_event.dart';
+import '../../features/subscription/bloc/subscription_state.dart';
+import '../../features/subscription/paywall_dialog.dart';
+import '../../features/subscription/subscription_checker.dart';
 import '../jobs/job_form_screen.dart';
 import '../jobs/job_detail_screen.dart';
+import '../jobs/bloc/jobs_bloc.dart';
+import '../jobs/bloc/jobs_event.dart';
 import 'bloc/dashboard_bloc.dart';
 import 'bloc/dashboard_event.dart';
 import 'bloc/dashboard_state.dart';
@@ -96,18 +104,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const JobFormScreen()),
-          ).then((_) {
-            if (context.mounted) {
-              context
-                  .read<DashboardBloc>()
-                  .add(const DashboardRefreshRequested());
-            }
-          });
-        },
+        onPressed: () => _onAddJob(context),
         backgroundColor: AppColors.accent,
         child: const Icon(Icons.add, color: Colors.white),
       ),
@@ -297,5 +294,54 @@ class _DashboardScreenState extends State<DashboardScreen> {
         style: TextStyle(color: textColor, fontSize: 12),
       ),
     );
+  }
+
+  Future<void> _onAddJob(BuildContext context) async {
+    final subState = context.read<SubscriptionBloc>().state;
+    final dashboardState = context.read<DashboardBloc>().state;
+
+    int jobCount = 0;
+    if (dashboardState is DashboardLoaded) {
+      jobCount = dashboardState.totalJobs;
+    }
+
+    SubscriptionModel? subModel;
+    if (subState is SubscriptionLoaded) {
+      subModel = subState.subscription;
+    } else {
+      final checker = SubscriptionChecker();
+      subModel = await checker.checkSubscription();
+    }
+
+    final checker = SubscriptionChecker();
+    if (!checker.canCreateJob(jobCount, subModel)) {
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (ctx) => PaywallDialog(
+            featureName: 'unlimited job tracking',
+            onSubscribe: () {
+              Navigator.pop(ctx);
+              context
+                  .read<SubscriptionBloc>()
+                  .add(const SubscriptionSubscribeRequested());
+            },
+            onDismiss: () => Navigator.pop(ctx),
+          ),
+        );
+      }
+      return;
+    }
+
+    if (context.mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const JobFormScreen()),
+      ).then((_) {
+        if (context.mounted) {
+          context.read<DashboardBloc>().add(const DashboardRefreshRequested());
+        }
+      });
+    }
   }
 }

@@ -16,7 +16,6 @@ class SubscriptionChecker {
       if (kDebugMode) {
         debugPrint('Subscription check failed: $e');
       }
-      // If endpoint doesn't exist, assume free tier
       return const SubscriptionModel(isActive: false);
     }
   }
@@ -25,6 +24,6 @@ class SubscriptionChecker {
   bool canUseCloudStorage(SubscriptionModel sub) => sub.hasFullAccess;
   bool canCreateJob(int currentJobCount, SubscriptionModel sub) {
     if (sub.hasFullAccess) return true;
-    return currentJobCount < 5; // Free tier limit
+    return currentJobCount < 5;
   }
 }

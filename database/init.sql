@@ -120,3 +120,21 @@ CREATE INDEX idx_jobs_user_id ON jobs(user_id);
 CREATE INDEX idx_oauth_links_user_id ON oauth_links(user_id);
 CREATE INDEX idx_application_history_job_id ON application_history(job_id);
 CREATE INDEX idx_application_history_created ON application_history(created_at);
+
+CREATE TABLE IF NOT EXISTS subscriptions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    stripe_customer_id VARCHAR(255),
+    stripe_subscription_id VARCHAR(255),
+    status ENUM('active', 'trialing', 'past_due', 'canceled', 'incomplete') DEFAULT 'incomplete',
+    current_period_start TIMESTAMP NULL,
+    current_period_end TIMESTAMP NULL,
+    trial_end TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_user_subscription (user_id)
+);
+
+CREATE INDEX idx_subscriptions_user_id ON subscriptions(user_id);
+CREATE INDEX idx_subscriptions_stripe_customer ON subscriptions(stripe_customer_id);

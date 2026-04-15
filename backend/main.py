@@ -5,7 +5,16 @@ from datetime import datetime, date
 from typing import Optional, List
 from io import BytesIO
 
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, Query
+from fastapi import (
+    FastAPI,
+    Depends,
+    HTTPException,
+    UploadFile,
+    File,
+    Form,
+    Query,
+    Request,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, HTMLResponse
 from sqlalchemy.orm import Session
@@ -25,6 +34,7 @@ from database import (
     TechFitAnalysis,
     User,
     OAuthLink,
+    Subscription,
 )
 from models import (
     JobCreate,
@@ -46,6 +56,8 @@ from models import (
     UserWithLinks,
     OAuthLinkInfo,
     OAuthProvider,
+    SubscriptionStatus,
+    CheckoutSessionRequest,
 )
 
 AI_SERVICE_URL = os.getenv("AI_SERVICE_URL", "http://ai-service:8001")
@@ -1252,6 +1264,236 @@ async def review_resume(
             return response.json()
         except httpx.HTTPError as e:
             raise HTTPException(status_code=500, detail=f"AI service error: {str(e)}")
+
+
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+
+
+@app.get("/api/subscription", response_model=SubscriptionStatus)
+def get_subscription_status(
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    subscription = (
+        db.query(Subscription).filter(Subscription.user_id == current_user.id).first()
+    )
+
+    if not subscription:
+        return SubscriptionStatus(
+            is_active=False,
+            status="none",
+            trial_end_date=None,
+            grace_period_until=None,
+            current_period_end=None,
+        )
+
+    is_active = subscription.status in ("active", "trialing")
+    from datetime import datetime
+
+    now = datetime.utcnow()
+
+    grace_until = None
+    if (
+        not is_active
+        and subscription.current_period_end
+        and subscription.current_period_end > now
+    ):
+        grace_until = subscription.current_period_end.isoformat()
+
+    return SubscriptionStatus(
+        is_active=is_active,
+        status=subscription.status,
+        trial_end_date=subscription.trial_end.isoformat()
+        if subscription.trial_end
+        else None,
+        grace_period_until=grace_until,
+        current_period_end=subscription.current_period_end.isoformat()
+        if subscription.current_period_end
+        else None,
+    )
+
+
+@app.post("/api/subscription/checkout")
+async def create_checkout_session(
+    request: CheckoutSessionRequest = CheckoutSessionRequest(),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=503, detail="Stripe is not configured")
+
+    import stripe
+
+    stripe.api_key = STRIPE_SECRET_KEY
+
+    subscription = (
+        db.query(Subscription).filter(Subscription.user_id == current_user.id).first()
+    )
+
+    if not subscription or not subscription.stripe_customer_id:
+        customer = stripe.Customer.create(
+            email=current_user.email,
+            name=current_user.name or "",
+            metadata={"user_id": current_user.id},
+        )
+
+        subscription = Subscription(
+            user_id=current_user.id,
+            stripe_customer_id=customer.id,
+            status="incomplete",
+        )
+        db.add(subscription)
+        db.commit()
+        db.refresh(subscription)
+
+    price_id = request.price_id or os.getenv("STRIPE_PRICE_ID", "price_placeholder")
+
+    success_url = request.success_url or os.getenv(
+        "STRIPE_SUCCESS_URL", "jobsync://subscription/success"
+    )
+    cancel_url = request.cancel_url or os.getenv(
+        "STRIPE_CANCEL_URL", "jobsync://subscription/cancel"
+    )
+
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            customer=subscription.stripe_customer_id,
+            mode="subscription",
+            line_items=[{"price": price_id, "quantity": 1}],
+            success_url=success_url,
+            cancel_url=cancel_url,
+            subscription_data={
+                "trial_period_days": 7,
+            },
+        )
+        return {"session_id": checkout_session.id, "url": checkout_session.url}
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
+
+
+@app.post("/api/subscription/webhook")
+async def stripe_webhook(request_body: bytes = None):
+    if not STRIPE_WEBHOOK_SECRET:
+        raise HTTPException(status_code=503, detail="Webhook secret not configured")
+
+    import stripe
+
+    stripe.api_key = STRIPE_SECRET_KEY
+
+    payload = request_body
+    sig_header = None
+
+    from fastapi import Request
+
+    return {"status": "webhook_received"}
+
+
+@app.post("/api/subscription/webhook/stripe")
+async def stripe_webhook_handler(request: Request):
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature")
+
+    if not STRIPE_SECRET_KEY or not STRIPE_WEBHOOK_SECRET:
+        raise HTTPException(status_code=503, detail="Stripe not configured")
+
+    import stripe
+
+    stripe.api_key = STRIPE_SECRET_KEY
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, STRIPE_WEBHOOK_SECRET
+        )
+    except stripe.error.SignatureVerificationError:
+        raise HTTPException(status_code=400, detail="Invalid signature")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Webhook error")
+
+    db = next(get_db())
+    try:
+        if event["type"] == "customer.subscription.created":
+            _handle_subscription_event(event, db)
+        elif event["type"] == "customer.subscription.updated":
+            _handle_subscription_event(event, db)
+        elif event["type"] == "customer.subscription.deleted":
+            _handle_subscription_deleted(event, db)
+        elif event["type"] == "invoice.payment_failed":
+            _handle_payment_failed(event, db)
+    finally:
+        db.close()
+
+    return {"status": "success"}
+
+
+def _handle_subscription_event(event: dict, db: Session):
+    stripe_sub = event["data"]["object"]
+    customer_id = stripe_sub["customer"]
+
+    subscription = (
+        db.query(Subscription)
+        .filter(Subscription.stripe_customer_id == customer_id)
+        .first()
+    )
+    if not subscription:
+        return
+
+    subscription.stripe_subscription_id = stripe_sub["id"]
+    subscription.status = stripe_sub["status"]
+
+    if stripe_sub.get("trial_end"):
+        from datetime import datetime
+
+        subscription.trial_end = datetime.fromtimestamp(stripe_sub["trial_end"])
+
+    if stripe_sub.get("current_period_end"):
+        from datetime import datetime
+
+        period_end = datetime.fromtimestamp(stripe_sub["current_period_end"])
+        subscription.current_period_end = period_end
+        subscription.current_period_start = datetime.fromtimestamp(
+            stripe_sub["current_period_start"]
+        )
+
+    db.commit()
+
+
+def _handle_subscription_deleted(event: dict, db: Session):
+    stripe_sub = event["data"]["object"]
+    customer_id = stripe_sub["customer"]
+
+    subscription = (
+        db.query(Subscription)
+        .filter(Subscription.stripe_customer_id == customer_id)
+        .first()
+    )
+    if not subscription:
+        return
+
+    subscription.status = "canceled"
+    subscription.stripe_subscription_id = None
+    db.commit()
+
+
+def _handle_payment_failed(event: dict, db: Session):
+    invoice = event["data"]["object"]
+    customer_id = invoice.get("customer")
+
+    if not customer_id:
+        return
+
+    subscription = (
+        db.query(Subscription)
+        .filter(Subscription.stripe_customer_id == customer_id)
+        .first()
+    )
+    if not subscription:
+        return
+
+    from datetime import datetime, timedelta
+
+    subscription.status = "past_due"
+    subscription.grace_period = datetime.utcnow() + timedelta(days=3)
+    db.commit()
 
 
 if __name__ == "__main__":

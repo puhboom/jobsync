@@ -33,6 +33,7 @@ class ApiConstants {
   // Dashboard
   static const String dashboardStats = '/api/dashboard/stats';
 
-  // Subscription (requires backend addition)
+  // Subscription
   static const String subscription = '/api/subscription';
+  static const String subscriptionCheckout = '/api/subscription/checkout';
 }

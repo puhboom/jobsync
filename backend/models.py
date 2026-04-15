@@ -227,6 +227,24 @@ class UserWithLinks(BaseModel):
     name: Optional[str]
     picture: Optional[str]
     oauth_providers: List[str] = []
+    has_active_subscription: bool = False
 
     class Config:
         from_attributes = True
+
+
+class SubscriptionStatus(BaseModel):
+    is_active: bool
+    status: str = "incomplete"
+    trial_end_date: Optional[str] = None
+    grace_period_until: Optional[str] = None
+    current_period_end: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class CheckoutSessionRequest(BaseModel):
+    price_id: Optional[str] = None
+    success_url: Optional[str] = None
+    cancel_url: Optional[str] = None

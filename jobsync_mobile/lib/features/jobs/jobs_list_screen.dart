@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/job_model.dart';
+import '../../../data/models/subscription_model.dart';
+import '../../../features/subscription/bloc/subscription_bloc.dart';
+import '../../../features/subscription/bloc/subscription_event.dart';
+import '../../../features/subscription/bloc/subscription_state.dart';
+import '../../../features/subscription/paywall_dialog.dart';
+import '../../../features/subscription/subscription_checker.dart';
 import 'job_detail_screen.dart';
 import 'job_form_screen.dart';
 import 'bloc/jobs_bloc.dart';
@@ -148,16 +155,7 @@ class _JobsListScreenState extends State<JobsListScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const JobFormScreen()),
-          ).then((_) {
-            if (context.mounted) {
-              context.read<JobsBloc>().add(JobsLoadRequested());
-            }
-          });
-        },
+        onPressed: () => _onAddJob(context),
         backgroundColor: AppColors.accent,
         child: const Icon(Icons.add, color: Colors.white),
       ),
@@ -190,5 +188,53 @@ class _JobsListScreenState extends State<JobsListScreen> {
         );
       },
     );
+  }
+
+  Future<void> _onAddJob(BuildContext context) async {
+    final subState = context.read<SubscriptionBloc>().state;
+    final jobsState = context.read<JobsBloc>().state;
+
+    int jobCount = 0;
+    if (jobsState is JobsLoaded) {
+      jobCount = jobsState.jobs.length;
+    }
+
+    SubscriptionModel? subModel;
+    if (subState is SubscriptionLoaded) {
+      subModel = subState.subscription;
+    } else {
+      final checker = SubscriptionChecker();
+      subModel = await checker.checkSubscription();
+    }
+
+    if (!SubscriptionChecker().canCreateJob(jobCount, subModel)) {
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (ctx) => PaywallDialog(
+            featureName: 'unlimited job tracking',
+            onSubscribe: () {
+              Navigator.pop(ctx);
+              context
+                  .read<SubscriptionBloc>()
+                  .add(const SubscriptionSubscribeRequested());
+            },
+            onDismiss: () => Navigator.pop(ctx),
+          ),
+        );
+      }
+      return;
+    }
+
+    if (context.mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const JobFormScreen()),
+      ).then((_) {
+        if (context.mounted) {
+          context.read<JobsBloc>().add(JobsLoadRequested());
+        }
+      });
+    }
   }
 }

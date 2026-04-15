@@ -175,6 +175,12 @@ class User(Base):
     base_resumes = relationship(
         "BaseResume", back_populates="user", cascade="all, delete-orphan"
     )
+    subscription = relationship(
+        "Subscription",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
 
 
 class OAuthLink(Base):
@@ -197,6 +203,28 @@ class OAuthLink(Base):
     __table_args__ = (
         UniqueConstraint("provider", "provider_user_id", name="uq_provider_user"),
     )
+
+
+class Subscription(Base):
+    __tablename__ = "subscriptions"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+    stripe_customer_id = Column(String(255), nullable=True)
+    stripe_subscription_id = Column(String(255), nullable=True)
+    status = Column(
+        Enum("active", "trialing", "past_due", "canceled", "incomplete"),
+        default="incomplete",
+    )
+    current_period_start = Column(DateTime, nullable=True)
+    current_period_end = Column(DateTime, nullable=True)
+    trial_end = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User", back_populates="subscription")
 
 
 def get_db():

@@ -13,13 +13,12 @@ class SubscriptionRepository {
       final response = await _apiClient.get(ApiConstants.subscription);
       return SubscriptionModel.fromJson(response.data);
     } catch (e) {
-      // If endpoint doesn't exist, assume free tier
       return const SubscriptionModel(isActive: false);
     }
   }
 
   Future<Map<String, dynamic>> createCheckoutSession() async {
-    final response = await _apiClient.post(ApiConstants.subscription);
+    final response = await _apiClient.post(ApiConstants.subscriptionCheckout);
     return response.data;
   }
 
