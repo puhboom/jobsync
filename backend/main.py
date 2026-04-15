@@ -5,7 +5,7 @@ from datetime import datetime, date
 from typing import Optional, List
 from io import BytesIO
 
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, HTMLResponse
 from sqlalchemy.orm import Session
@@ -49,6 +49,27 @@ from models import (
 )
 
 AI_SERVICE_URL = os.getenv("AI_SERVICE_URL", "http://ai-service:8001")
+
+
+def get_current_user(
+    token: Optional[str] = Query(None), db: Session = Depends(get_db)
+) -> User:
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    try:
+        parts = token.split("_")
+        if len(parts) < 3:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        user_id = int(parts[1])
+    except (ValueError, IndexError):
+        raise HTTPException(status_code=401, detail="Invalid token format")
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
+
 
 app = FastAPI(title="JobSync API", version="1.0.0")
 
@@ -127,13 +148,16 @@ def login(provider: str = "google"):
         client_id = os.getenv("GOOGLE_CLIENT_ID", "")
 
         import urllib.parse
-        params = urllib.parse.urlencode({
-            "client_id": client_id,
-            "redirect_uri": redirect_uri,
-            "response_type": "code",
-            "scope": "openid email profile",
-            "access_type": "offline",
-        })
+
+        params = urllib.parse.urlencode(
+            {
+                "client_id": client_id,
+                "redirect_uri": redirect_uri,
+                "response_type": "code",
+                "scope": "openid email profile",
+                "access_type": "offline",
+            }
+        )
         auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{params}"
 
         return {"authorization_url": auth_url}
@@ -141,12 +165,15 @@ def login(provider: str = "google"):
         client_id = os.getenv("LINKEDIN_CLIENT_ID", "")
 
         import urllib.parse
-        params = urllib.parse.urlencode({
-            "client_id": client_id,
-            "redirect_uri": redirect_uri,
-            "response_type": "code",
-            "scope": "openid email profile",
-        })
+
+        params = urllib.parse.urlencode(
+            {
+                "client_id": client_id,
+                "redirect_uri": redirect_uri,
+                "response_type": "code",
+                "scope": "openid email profile",
+            }
+        )
         auth_url = f"https://www.linkedin.com/oauth/v2/authorization?{params}"
 
         return {"authorization_url": auth_url}
@@ -155,23 +182,35 @@ def login(provider: str = "google"):
 
 
 @app.get("/api/dashboard/stats", response_model=DashboardStats)
-def get_dashboard_stats(db: Session = Depends(get_db)):
-    total_jobs = db.query(func.count(Job.id)).scalar()
+def get_dashboard_stats(
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    total_jobs = (
+        db.query(func.count(Job.id)).filter(Job.user_id == current_user.id).scalar()
+    )
     active_applications = (
         db.query(func.count(Job.id))
         .filter(
+            Job.user_id == current_user.id,
             Job.status.in_(
                 ["saved", "applied", "phone_screen", "interview", "executive_call"]
-            )
+            ),
         )
         .scalar()
     )
     interviews = (
         db.query(func.count(Job.id))
-        .filter(Job.status.in_(["interview", "executive_call"]))
+        .filter(
+            Job.user_id == current_user.id,
+            Job.status.in_(["interview", "executive_call"]),
+        )
         .scalar()
     )
-    offers = db.query(func.count(Job.id)).filter(Job.status == "offered").scalar()
+    offers = (
+        db.query(func.count(Job.id))
+        .filter(Job.user_id == current_user.id, Job.status == "offered")
+        .scalar()
+    )
 
     return DashboardStats(
         total_jobs=total_jobs or 0,
@@ -182,8 +221,12 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
 
 
 @app.get("/api/jobs", response_model=List[JobModel])
-def list_jobs(status: Optional[str] = None, db: Session = Depends(get_db)):
-    query = db.query(Job)
+def list_jobs(
+    status: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    query = db.query(Job).filter(Job.user_id == current_user.id)
     if status:
         query = query.filter(Job.status == status)
     jobs = query.order_by(Job.updated_at.desc()).all()
@@ -191,16 +234,33 @@ def list_jobs(status: Optional[str] = None, db: Session = Depends(get_db)):
 
 
 @app.get("/api/jobs/{job_id}", response_model=JobModel)
-def get_job(job_id: int, db: Session = Depends(get_db)):
-    job = db.query(Job).filter(Job.id == job_id).first()
+def get_job(
+    job_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    job = db.query(Job).filter(Job.id == job_id, Job.user_id == current_user.id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     return job
 
 
 @app.post("/api/jobs", response_model=JobModel)
-def create_job(job: JobCreate, db: Session = Depends(get_db)):
-    db_job = Job(**job.dict())
+def create_job(
+    job: JobCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    job_data = job.dict()
+    if job_data.get("requirements") and isinstance(job_data["requirements"], list):
+        job_data["requirements"] = ", ".join(job_data["requirements"])
+    if job_data.get("keywords") and isinstance(job_data["keywords"], list):
+        job_data["keywords"] = ", ".join(job_data["keywords"])
+    if job_data.get("description"):
+        job_data["raw_description"] = job_data.pop("description")
+    else:
+        job_data.pop("description", None)
+    db_job = Job(**job_data, user_id=current_user.id)
     db.add(db_job)
     db.commit()
     db.refresh(db_job)
@@ -208,8 +268,15 @@ def create_job(job: JobCreate, db: Session = Depends(get_db)):
 
 
 @app.put("/api/jobs/{job_id}", response_model=JobModel)
-def update_job(job_id: int, job: JobUpdate, db: Session = Depends(get_db)):
-    db_job = db.query(Job).filter(Job.id == job_id).first()
+def update_job(
+    job_id: int,
+    job: JobUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    db_job = (
+        db.query(Job).filter(Job.id == job_id, Job.user_id == current_user.id).first()
+    )
     if not db_job:
         raise HTTPException(status_code=404, detail="Job not found")
 
@@ -223,8 +290,14 @@ def update_job(job_id: int, job: JobUpdate, db: Session = Depends(get_db)):
 
 
 @app.delete("/api/jobs/{job_id}")
-def delete_job(job_id: int, db: Session = Depends(get_db)):
-    db_job = db.query(Job).filter(Job.id == job_id).first()
+def delete_job(
+    job_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    db_job = (
+        db.query(Job).filter(Job.id == job_id, Job.user_id == current_user.id).first()
+    )
     if not db_job:
         raise HTTPException(status_code=404, detail="Job not found")
     db.delete(db_job)
@@ -234,9 +307,14 @@ def delete_job(job_id: int, db: Session = Depends(get_db)):
 
 @app.post("/api/jobs/{job_id}/parse-description")
 async def parse_job_description(
-    job_id: int, description: dict, db: Session = Depends(get_db)
+    job_id: int,
+    description: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    db_job = db.query(Job).filter(Job.id == job_id).first()
+    db_job = (
+        db.query(Job).filter(Job.id == job_id, Job.user_id == current_user.id).first()
+    )
     if not db_job:
         raise HTTPException(status_code=404, detail="Job not found")
 
@@ -284,7 +362,14 @@ async def parse_job_description(
 
 
 @app.get("/api/jobs/{job_id}/history", response_model=List[ApplicationHistoryModel])
-def get_job_history(job_id: int, db: Session = Depends(get_db)):
+def get_job_history(
+    job_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    job = db.query(Job).filter(Job.id == job_id, Job.user_id == current_user.id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
     history = (
         db.query(ApplicationHistory)
         .filter(ApplicationHistory.job_id == job_id)
@@ -296,24 +381,32 @@ def get_job_history(job_id: int, db: Session = Depends(get_db)):
 
 @app.post("/api/jobs/{job_id}/history", response_model=ApplicationHistoryModel)
 def create_history_entry(
-    job_id: int, entry: ApplicationHistoryCreate, db: Session = Depends(get_db)
+    job_id: int,
+    entry: ApplicationHistoryCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
+    job = db.query(Job).filter(Job.id == job_id, Job.user_id == current_user.id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
     db_entry = ApplicationHistory(job_id=job_id, **entry.dict())
     db.add(db_entry)
     db.commit()
     db.refresh(db_entry)
 
-    db_job = db.query(Job).filter(Job.id == job_id).first()
-    if db_job:
-        db_job.status = entry.status
-        db.commit()
+    job.status = entry.status
+    db.commit()
 
     return db_entry
 
 
 @app.get("/api/resumes", response_model=List[BaseResumeModel])
-def list_resumes(file_type: Optional[str] = None, db: Session = Depends(get_db)):
-    query = db.query(BaseResume)
+def list_resumes(
+    file_type: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    query = db.query(BaseResume).filter(BaseResume.user_id == current_user.id)
     if file_type:
         query = query.filter(BaseResume.file_type == file_type)
     resumes = query.order_by(BaseResume.created_at.desc()).all()
@@ -321,8 +414,16 @@ def list_resumes(file_type: Optional[str] = None, db: Session = Depends(get_db))
 
 
 @app.get("/api/resumes/{resume_id}")
-def get_resume(resume_id: int, db: Session = Depends(get_db)):
-    resume = db.query(BaseResume).filter(BaseResume.id == resume_id).first()
+def get_resume(
+    resume_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    resume = (
+        db.query(BaseResume)
+        .filter(BaseResume.id == resume_id, BaseResume.user_id == current_user.id)
+        .first()
+    )
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
 
@@ -339,6 +440,7 @@ def get_resume(resume_id: int, db: Session = Depends(get_db)):
 async def upload_resume(
     file: UploadFile = File(...),
     file_type: str = Form(...),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     content = await file.read()
@@ -375,6 +477,7 @@ async def upload_resume(
         content_type=file.content_type,
         file_type=file_type,
         text_content=text_content,
+        user_id=current_user.id,
     )
     db.add(db_resume)
     db.commit()
@@ -383,8 +486,16 @@ async def upload_resume(
 
 
 @app.delete("/api/resumes/{resume_id}")
-def delete_resume(resume_id: int, db: Session = Depends(get_db)):
-    resume = db.query(BaseResume).filter(BaseResume.id == resume_id).first()
+def delete_resume(
+    resume_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    resume = (
+        db.query(BaseResume)
+        .filter(BaseResume.id == resume_id, BaseResume.user_id == current_user.id)
+        .first()
+    )
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
     db.delete(resume)
@@ -395,7 +506,14 @@ def delete_resume(resume_id: int, db: Session = Depends(get_db)):
 @app.get(
     "/api/jobs/{job_id}/generated-resumes", response_model=List[GeneratedResumeModel]
 )
-def list_generated_resumes(job_id: int, db: Session = Depends(get_db)):
+def list_generated_resumes(
+    job_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    job = db.query(Job).filter(Job.id == job_id, Job.user_id == current_user.id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
     resumes = (
         db.query(GeneratedResume)
         .filter(GeneratedResume.job_id == job_id)
@@ -406,18 +524,35 @@ def list_generated_resumes(job_id: int, db: Session = Depends(get_db)):
 
 
 @app.get("/api/generated-resumes/{resume_id}", response_model=GeneratedResumeModel)
-def get_generated_resume(resume_id: int, db: Session = Depends(get_db)):
+def get_generated_resume(
+    resume_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     resume = db.query(GeneratedResume).filter(GeneratedResume.id == resume_id).first()
     if not resume:
         raise HTTPException(status_code=404, detail="Generated resume not found")
+    job = (
+        db.query(Job)
+        .filter(Job.id == resume.job_id, Job.user_id == current_user.id)
+        .first()
+    )
+    if not job:
+        raise HTTPException(status_code=404, detail="Resume not found")
     return resume
 
 
 @app.post("/api/generate-resume")
 async def generate_resume(
-    request: ResumeGenerateRequest, db: Session = Depends(get_db)
+    request: ResumeGenerateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    job = db.query(Job).filter(Job.id == request.job_id).first()
+    job = (
+        db.query(Job)
+        .filter(Job.id == request.job_id, Job.user_id == current_user.id)
+        .first()
+    )
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
@@ -425,7 +560,10 @@ async def generate_resume(
     if request.example_resume_id:
         example_resume = (
             db.query(BaseResume)
-            .filter(BaseResume.id == request.example_resume_id)
+            .filter(
+                BaseResume.id == request.example_resume_id,
+                BaseResume.user_id == current_user.id,
+            )
             .first()
         )
 
@@ -433,7 +571,10 @@ async def generate_resume(
     if request.template_resume_id:
         template_resume = (
             db.query(BaseResume)
-            .filter(BaseResume.id == request.template_resume_id)
+            .filter(
+                BaseResume.id == request.template_resume_id,
+                BaseResume.user_id == current_user.id,
+            )
             .first()
         )
 
@@ -475,11 +616,21 @@ async def generate_resume(
 
 @app.put("/api/generated-resumes/{resume_id}", response_model=GeneratedResumeModel)
 def update_generated_resume(
-    resume_id: int, content: dict, db: Session = Depends(get_db)
+    resume_id: int,
+    content: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     resume = db.query(GeneratedResume).filter(GeneratedResume.id == resume_id).first()
     if not resume:
         raise HTTPException(status_code=404, detail="Generated resume not found")
+    job = (
+        db.query(Job)
+        .filter(Job.id == resume.job_id, Job.user_id == current_user.id)
+        .first()
+    )
+    if not job:
+        raise HTTPException(status_code=404, detail="Resume not found")
 
     resume.content = content.get("content", resume.content)
     db.commit()
@@ -488,12 +639,22 @@ def update_generated_resume(
 
 
 @app.get("/api/generated-resumes/{resume_id}/export")
-def export_resume(resume_id: int, db: Session = Depends(get_db)):
+def export_resume(
+    resume_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     resume = db.query(GeneratedResume).filter(GeneratedResume.id == resume_id).first()
     if not resume:
         raise HTTPException(status_code=404, detail="Generated resume not found")
 
-    job = db.query(Job).filter(Job.id == resume.job_id).first()
+    job = (
+        db.query(Job)
+        .filter(Job.id == resume.job_id, Job.user_id == current_user.id)
+        .first()
+    )
+    if not job:
+        raise HTTPException(status_code=404, detail="Resume not found")
 
     from docx import Document
 
@@ -525,8 +686,13 @@ def export_resume(resume_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/api/jobs/{job_id}/analyze-ats", response_model=ATSAnalysisModel)
-async def analyze_ats(job_id: int, request: dict, db: Session = Depends(get_db)):
-    job = db.query(Job).filter(Job.id == job_id).first()
+async def analyze_ats(
+    job_id: int,
+    request: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    job = db.query(Job).filter(Job.id == job_id, Job.user_id == current_user.id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
@@ -588,8 +754,13 @@ async def analyze_ats(job_id: int, request: dict, db: Session = Depends(get_db))
 
 
 @app.post("/api/jobs/{job_id}/analyze-tech-fit", response_model=TechFitAnalysisModel)
-async def analyze_tech_fit(job_id: int, request: dict, db: Session = Depends(get_db)):
-    job = db.query(Job).filter(Job.id == job_id).first()
+async def analyze_tech_fit(
+    job_id: int,
+    request: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    job = db.query(Job).filter(Job.id == job_id, Job.user_id == current_user.id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
@@ -647,7 +818,14 @@ async def analyze_tech_fit(job_id: int, request: dict, db: Session = Depends(get
 
 
 @app.get("/api/jobs/{job_id}/ats-analyses", response_model=List[ATSAnalysisModel])
-def get_ats_analyses(job_id: int, db: Session = Depends(get_db)):
+def get_ats_analyses(
+    job_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    job = db.query(Job).filter(Job.id == job_id, Job.user_id == current_user.id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
     analyses = (
         db.query(ATSAnalysis)
         .filter(ATSAnalysis.job_id == job_id)
@@ -675,7 +853,14 @@ def get_ats_analyses(job_id: int, db: Session = Depends(get_db)):
 @app.get(
     "/api/jobs/{job_id}/tech-fit-analyses", response_model=List[TechFitAnalysisModel]
 )
-def get_tech_fit_analyses(job_id: int, db: Session = Depends(get_db)):
+def get_tech_fit_analyses(
+    job_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    job = db.query(Job).filter(Job.id == job_id, Job.user_id == current_user.id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
     analyses = (
         db.query(TechFitAnalysis)
         .filter(TechFitAnalysis.job_id == job_id)
@@ -839,34 +1024,17 @@ def oauth_callback(callback: OAuthCallback, db: Session = Depends(get_db)):
 
 
 @app.get("/api/auth/me", response_model=UserWithLinks)
-def get_current_user(
-    provider: Optional[str] = None,
-    token: Optional[str] = None,
+def get_current_user_endpoint(
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
-    try:
-        parts = token.split("_")
-        if len(parts) < 3:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        provider_name = parts[0]
-        user_id = int(parts[1])
-    except (ValueError, IndexError):
-        raise HTTPException(status_code=401, detail="Invalid token format")
-
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=401, detail="User not found")
-
-    oauth_providers = [link.provider for link in user.oauth_links]
+    oauth_providers = [link.provider for link in current_user.oauth_links]
 
     return UserWithLinks(
-        id=user.id,
-        email=user.email,
-        name=user.name,
-        picture=user.picture,
+        id=current_user.id,
+        email=current_user.email,
+        name=current_user.name,
+        picture=current_user.picture,
         oauth_providers=oauth_providers,
     )
 
@@ -1005,59 +1173,33 @@ class ProfileUpdate(BaseModel):
 
 
 @app.put("/api/auth/profile")
-def update_profile(profile: ProfileUpdate, token: str, db: Session = Depends(get_db)):
-    if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
-    try:
-        parts = token.split("_")
-        if len(parts) < 3:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        user_id = int(parts[1])
-    except (ValueError, IndexError):
-        raise HTTPException(status_code=401, detail="Invalid token format")
-
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=401, detail="User not found")
-
+def update_profile(
+    profile: ProfileUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     if profile.name is not None:
-        user.name = profile.name
+        current_user.name = profile.name
     if profile.picture is not None:
-        user.picture = profile.picture
+        current_user.picture = profile.picture
 
     db.commit()
-    db.refresh(user)
+    db.refresh(current_user)
 
     return {
-        "id": user.id,
-        "email": user.email,
-        "name": user.name,
-        "picture": user.picture,
+        "id": current_user.id,
+        "email": current_user.email,
+        "name": current_user.name,
+        "picture": current_user.picture,
     }
 
 
 @app.post("/api/auth/upload-picture")
 async def upload_profile_picture(
     file: UploadFile = File(...),
-    token: str = Form(...),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
-    try:
-        parts = token.split("_")
-        if len(parts) < 3:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        user_id = int(parts[1])
-    except (ValueError, IndexError):
-        raise HTTPException(status_code=401, detail="Invalid token format")
-
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=401, detail="User not found")
-
     content = await file.read()
 
     import base64
@@ -1066,15 +1208,15 @@ async def upload_profile_picture(
     mime_type = file.content_type or "image/png"
     picture_url = f"data:{mime_type};base64,{picture_data}"
 
-    user.picture = picture_url
+    current_user.picture = picture_url
     db.commit()
-    db.refresh(user)
+    db.refresh(current_user)
 
     return {
-        "id": user.id,
-        "email": user.email,
-        "name": user.name,
-        "picture": user.picture,
+        "id": current_user.id,
+        "email": current_user.email,
+        "name": current_user.name,
+        "picture": current_user.picture,
     }
 
 

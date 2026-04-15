@@ -38,6 +38,9 @@ class JobCreate(BaseModel):
     applied_date: Optional[date] = None
     notes: Optional[str] = None
     response_received: bool = False
+    description: Optional[str] = None
+    requirements: Optional[List[str]] = None
+    keywords: Optional[List[str]] = None
 
 
 class JobDescriptionParse(BaseModel):
