@@ -1220,6 +1220,40 @@ async def upload_profile_picture(
     }
 
 
+class ResumeReviewRequest(BaseModel):
+    job_description: str
+    job_requirements: Optional[str] = None
+    job_keywords: Optional[str] = None
+    example_resume: Optional[str] = None
+    resume: Optional[str] = None
+
+
+@app.post("/api/review-resume")
+async def review_resume(
+    request: ResumeReviewRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    async with httpx.AsyncClient() as client:
+        try:
+            payload = {
+                "job_description": request.job_description,
+                "job_requirements": request.job_requirements,
+                "job_keywords": request.job_keywords,
+                "example_resume": request.example_resume,
+                "resume": request.resume,
+            }
+            payload = {k: v for k, v in payload.items() if v is not None}
+
+            response = await client.post(
+                f"{AI_SERVICE_URL}/review-resume", json=payload, timeout=180.0
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPError as e:
+            raise HTTPException(status_code=500, detail=f"AI service error: {str(e)}")
+
+
 if __name__ == "__main__":
     import uvicorn
 
