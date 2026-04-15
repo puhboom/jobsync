@@ -1,20 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:uni_links/uni_links.dart';
+import 'package:app_links/app_links.dart';
 
 import 'app.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Handle deep link if app was launched with OAuth callback
   Uri? initialUri;
   try {
-    initialUri = await getInitialUri();
-  } catch (_) {
-    // Ignore errors getting initial URI
-  }
+    final appLinks = AppLinks();
+    initialUri = await appLinks.getInitialLink();
+  } catch (_) {}
 
-  // Initialize app (Hive, storage)
   final storage = await initializeApp();
 
   runApp(JobSyncApp(

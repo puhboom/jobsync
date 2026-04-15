@@ -2,8 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:app_links/app_links.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uni_links/uni_links.dart';
 
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
@@ -49,11 +49,13 @@ class JobSyncApp extends StatefulWidget {
 class _JobSyncAppState extends State<JobSyncApp> with WidgetsBindingObserver {
   StreamSubscription? _uriSubscription;
   AuthBloc? _authBloc;
+  late AppLinks _appLinks;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _appLinks = AppLinks();
     _handleIncomingLinks();
   }
 
@@ -62,11 +64,9 @@ class _JobSyncAppState extends State<JobSyncApp> with WidgetsBindingObserver {
       _handleUri(widget.initialUri!);
     }
 
-    _uriSubscription = uriLinkStream.listen(
-      (Uri? uri) {
-        if (uri != null) {
-          _handleUri(uri);
-        }
+    _uriSubscription = _appLinks.uriLinkStream.listen(
+      (Uri uri) {
+        _handleUri(uri);
       },
       onError: (err) {
         debugPrint('Error handling incoming link: $err');

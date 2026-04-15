@@ -29,10 +29,10 @@ dependencies:
   flutter_secure_storage: ^9.0.0
   google_sign_in: ^6.2.1
   url_launcher: ^6.2.4
-  uni_links: ^0.5.1
+  app_links: ^6.3.3
 
   # File Picking
-  file_picker: ^6.1.1
+  file_picker: ^8.0.0
   googleapis: ^12.0.0
   http: ^1.2.0
 
