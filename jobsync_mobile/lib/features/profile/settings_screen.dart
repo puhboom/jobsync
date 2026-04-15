@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../app.dart';
 import '../../core/theme/app_colors.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -9,12 +10,10 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _darkMode = false;
-  bool _notifications = true;
-  bool _offlineMode = true;
-
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
@@ -23,10 +22,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           SwitchListTile(
             title: const Text('Dark Mode'),
             subtitle: const Text('Use dark theme'),
-            value: _darkMode,
+            value: isDark,
             onChanged: (value) {
-              setState(() => _darkMode = value);
-              // TODO: Implement theme switching
+              setDarkMode(value);
             },
           ),
           const Divider(),
@@ -34,22 +32,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
           SwitchListTile(
             title: const Text('Push Notifications'),
             subtitle: const Text('Get notified about job updates'),
-            value: _notifications,
-            onChanged: (value) {
-              setState(() => _notifications = value);
-              // TODO: Implement notification settings
-            },
+            value: true,
+            onChanged: null,
           ),
           const Divider(),
           _buildSectionHeader('Data'),
           SwitchListTile(
             title: const Text('Offline Mode'),
             subtitle: const Text('Cache jobs for offline access'),
-            value: _offlineMode,
-            onChanged: (value) {
-              setState(() => _offlineMode = value);
-              // TODO: Implement offline mode toggle
-            },
+            value: true,
+            onChanged: null,
           ),
           ListTile(
             title: const Text('Clear Cache'),
@@ -64,7 +56,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: const Text('Update your email address'),
             leading: const Icon(Icons.email),
             onTap: () {
-              // TODO: Implement email change
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Coming soon')),
               );
@@ -75,7 +66,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: const Text('Manage Google/LinkedIn connections'),
             leading: const Icon(Icons.link),
             onTap: () {
-              // TODO: Show linked accounts
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Coming soon')),
               );
@@ -100,7 +90,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Text(
         title,
         style: TextStyle(
-          color: AppColors.primary,
+          color: AppColors.accent,
           fontWeight: FontWeight.bold,
           fontSize: 14,
         ),
@@ -124,12 +114,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
-              // TODO: Implement cache clearing
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Cache cleared')),
               );
             },
-            child: const Text('Clear', style: TextStyle(color: AppColors.error)),
+            child:
+                const Text('Clear', style: TextStyle(color: AppColors.error)),
           ),
         ],
       ),
@@ -152,12 +142,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
-              // TODO: Implement account deletion
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Coming soon')),
               );
             },
-            child: const Text('Delete', style: TextStyle(color: AppColors.error)),
+            child:
+                const Text('Delete', style: TextStyle(color: AppColors.error)),
           ),
         ],
       ),

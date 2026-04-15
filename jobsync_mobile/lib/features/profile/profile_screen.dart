@@ -6,6 +6,10 @@ import '../../../data/models/user_model.dart';
 import '../auth/bloc/auth_bloc.dart';
 import '../auth/bloc/auth_event.dart';
 import '../auth/bloc/auth_state.dart';
+import '../subscription/bloc/subscription_bloc.dart';
+import '../subscription/bloc/subscription_event.dart';
+import '../subscription/bloc/subscription_state.dart';
+import 'subscription_card.dart';
 import 'settings_screen.dart';
 import 'help_support_screen.dart';
 import 'about_screen.dart';
@@ -29,6 +33,10 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Widget _buildProfileContent(BuildContext context, UserModel user) {
+    final subState = context.watch<SubscriptionBloc>().state;
+    final hasActive =
+        subState is SubscriptionLoaded && subState.subscription.hasFullAccess;
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -62,7 +70,16 @@ class ProfileScreen extends StatelessWidget {
             user.name ?? 'Job Seeker',
             style: AppTypography.body1.copyWith(color: AppColors.textSecondary),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 16),
+          SubscriptionCard(
+            hasActiveSubscription: hasActive,
+            onSubscribe: () {
+              context
+                  .read<SubscriptionBloc>()
+                  .add(const SubscriptionSubscribeRequested());
+            },
+          ),
+          const SizedBox(height: 24),
           _buildListTile(
             context,
             Icons.settings,

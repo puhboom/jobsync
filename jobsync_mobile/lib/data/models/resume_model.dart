@@ -41,46 +41,8 @@ class BaseResumeModel extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, filename, contentType, fileType, textContent, createdAt];
-}
-
-class ResumeModel extends Equatable {
-  final String id;
-  final String name;
-  final String? fileUrl;
-  final String? contentType;
-  final DateTime uploadedAt;
-
-  const ResumeModel({
-    required this.id,
-    required this.name,
-    this.fileUrl,
-    this.contentType,
-    required this.uploadedAt,
-  });
-
-  factory ResumeModel.fromJson(Map<String, dynamic> json) {
-    return ResumeModel(
-      id: json['id']?.toString() ?? '',
-      name: json['name'] ?? '',
-      fileUrl: json['file_url'],
-      contentType: json['content_type'],
-      uploadedAt: DateTime.tryParse(json['uploaded_at'] ?? '') ?? DateTime.now(),
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'file_url': fileUrl,
-      'content_type': contentType,
-      'uploaded_at': uploadedAt.toIso8601String(),
-    };
-  }
-
-  @override
-  List<Object?> get props => [id, name, fileUrl, contentType, uploadedAt];
+  List<Object?> get props =>
+      [id, filename, contentType, fileType, textContent, createdAt];
 }
 
 class GeneratedResumeModel extends Equatable {

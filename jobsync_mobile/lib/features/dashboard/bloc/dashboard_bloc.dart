@@ -19,32 +19,29 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     emit(DashboardLoading());
 
     try {
-      final response = await _apiClient.get('/api/dashboard/stats');
+      final statsResponse = await _apiClient.get('/api/dashboard/stats');
+      final jobsResponse = await _apiClient.get('/api/jobs');
 
-      if (response.statusCode == 200) {
-        final jobsResponse = await _apiClient.get('/api/jobs');
+      final stats = statsResponse.data as Map<String, dynamic>;
+      final jobs = (jobsResponse.data as List)
+          .map((json) => JobModel.fromJson(json))
+          .toList();
 
-        final jobs = (jobsResponse.data as List)
-            .map((json) => JobModel.fromJson(json))
-            .toList();
-
-        // Calculate job counts by status
-        final jobCounts = <JobStatus, int>{};
-        for (final status in JobStatus.values) {
-          jobCounts[status] = jobs.where((j) => j.status == status).length;
-        }
-
-        // Get recent jobs (last 5)
-        final recentJobs = jobs.take(5).toList();
-
-        emit(DashboardLoaded(
-          jobCounts: jobCounts,
-          recentJobs: recentJobs,
-          totalJobs: jobs.length,
-        ));
-      } else {
-        emit(DashboardError(message: 'Failed to load dashboard'));
+      final jobCounts = <JobStatus, int>{};
+      for (final status in JobStatus.values) {
+        jobCounts[status] = jobs.where((j) => j.status == status).length;
       }
+
+      final recentJobs = jobs.take(5).toList();
+
+      emit(DashboardLoaded(
+        jobCounts: jobCounts,
+        recentJobs: recentJobs,
+        totalJobs: stats['total_jobs'] as int? ?? jobs.length,
+        activeApplications: stats['active_applications'] as int? ?? 0,
+        interviewCount: stats['interviews'] as int? ?? 0,
+        offerCount: stats['offers'] as int? ?? 0,
+      ));
     } catch (e) {
       emit(DashboardError(message: e.toString()));
     }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/widgets/status_chip.dart';
 import '../../data/models/job_model.dart';
 import '../../data/models/subscription_model.dart';
 import '../../features/subscription/bloc/subscription_bloc.dart';
@@ -127,23 +128,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
           AppColors.primary,
         ),
         _buildStatCard(
-          'Applied',
-          (state.jobCounts[JobStatus.applied] ?? 0).toString(),
+          'Active',
+          state.activeApplications.toString(),
           Icons.send,
           AppColors.appliedText,
         ),
         _buildStatCard(
           'Interviews',
-          ((state.jobCounts[JobStatus.interview] ?? 0) +
-                  (state.jobCounts[JobStatus.phoneScreen] ?? 0) +
-                  (state.jobCounts[JobStatus.executiveCall] ?? 0))
-              .toString(),
+          state.interviewCount.toString(),
           Icons.people,
           AppColors.interviewText,
         ),
         _buildStatCard(
           'Offers',
-          (state.jobCounts[JobStatus.offered] ?? 0).toString(),
+          state.offerCount.toString(),
           Icons.celebration,
           AppColors.offeredText,
         ),
@@ -229,7 +227,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             title: Text(job.company, style: AppTypography.body1),
             subtitle: Text(job.position, style: AppTypography.caption),
-            trailing: _buildStatusChip(job.status),
+            trailing: StatusChip(status: job.status),
             onTap: () {
               Navigator.push(
                 context,
@@ -246,53 +244,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildStatusChip(JobStatus status) {
-    Color bgColor;
-    Color textColor;
-
-    switch (status) {
-      case JobStatus.saved:
-        bgColor = AppColors.savedBg;
-        textColor = AppColors.savedText;
-      case JobStatus.applied:
-        bgColor = AppColors.appliedBg;
-        textColor = AppColors.appliedText;
-      case JobStatus.phoneScreen:
-        bgColor = AppColors.phoneScreenBg;
-        textColor = AppColors.phoneScreenText;
-      case JobStatus.interview:
-        bgColor = AppColors.interviewBg;
-        textColor = AppColors.interviewText;
-      case JobStatus.executiveCall:
-        bgColor = AppColors.executiveCallBg;
-        textColor = AppColors.executiveCallText;
-      case JobStatus.offered:
-        bgColor = AppColors.offeredBg;
-        textColor = AppColors.offeredText;
-      case JobStatus.rejected:
-        bgColor = AppColors.rejectedBg;
-        textColor = AppColors.rejectedText;
-      case JobStatus.withdrawn:
-        bgColor = AppColors.withdrawnBg;
-        textColor = AppColors.withdrawnText;
-      case JobStatus.closed:
-        bgColor = AppColors.closedBg;
-        textColor = AppColors.closedText;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        status.displayName,
-        style: TextStyle(color: textColor, fontSize: 12),
-      ),
     );
   }
 

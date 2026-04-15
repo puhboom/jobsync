@@ -1,8 +1,8 @@
-// filepath: jobsync_mobile/lib/app.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uni_links/uni_links.dart';
 
 import 'core/constants/app_constants.dart';
@@ -18,13 +18,20 @@ import 'features/resumes/bloc/resumes_bloc.dart';
 import 'features/subscription/bloc/subscription_bloc.dart';
 import 'navigation/main_navigation.dart';
 
-/// JobSync Application
-/// 
-/// Main application widget that sets up:
-/// - Hive local storage
-/// - BLoC providers
-/// - Deep link handling for OAuth callbacks
-/// - Authentication state management
+final ValueNotifier<ThemeMode> themeMode = ValueNotifier(ThemeMode.light);
+
+Future<void> loadThemePreference() async {
+  final prefs = await SharedPreferences.getInstance();
+  final isDark = prefs.getBool('dark_mode') ?? false;
+  themeMode.value = isDark ? ThemeMode.dark : ThemeMode.light;
+}
+
+Future<void> setDarkMode(bool enabled) async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setBool('dark_mode', enabled);
+  themeMode.value = enabled ? ThemeMode.dark : ThemeMode.light;
+}
+
 class JobSyncApp extends StatefulWidget {
   final LocalStorage storage;
   final Uri? initialUri;
@@ -51,12 +58,10 @@ class _JobSyncAppState extends State<JobSyncApp> with WidgetsBindingObserver {
   }
 
   void _handleIncomingLinks() {
-    // Handle the initial URI (app was launched with deep link)
     if (widget.initialUri != null) {
       _handleUri(widget.initialUri!);
     }
 
-    // Listen for incoming links while app is running
     _uriSubscription = uriLinkStream.listen(
       (Uri? uri) {
         if (uri != null) {
@@ -70,8 +75,6 @@ class _JobSyncAppState extends State<JobSyncApp> with WidgetsBindingObserver {
   }
 
   void _handleUri(Uri uri) {
-    // Check if this is an OAuth callback URL
-    // Format: jobsync://oauth/callback?code=xxx&provider=google
     if (uri.scheme == 'jobsync' &&
         uri.host == 'oauth' &&
         (uri.path == '/callback' || uri.path == 'callback')) {
@@ -80,7 +83,6 @@ class _JobSyncAppState extends State<JobSyncApp> with WidgetsBindingObserver {
       final provider = params['provider'];
 
       if (code != null && provider != null) {
-        // Schedule the event to run after build
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && _authBloc != null) {
             _authBloc!.add(AuthOAuthCallback(
@@ -123,49 +125,49 @@ class _JobSyncAppState extends State<JobSyncApp> with WidgetsBindingObserver {
             create: (_) => SubscriptionBloc(),
           ),
         ],
-        child: MaterialApp(
-          title: AppConstants.appName,
-          theme: AppTheme.lightTheme,
-          debugShowCheckedModeBanner: false,
-          home: BlocBuilder<AuthBloc, AuthState>(
-            builder: (context, state) {
-              // Check auth status on startup
-              if (state is AuthInitial || state is AuthLoading) {
-                return const Scaffold(
-                  body: Center(
-                    child: CircularProgressIndicator(),
-                  ),
-                );
-              }
+        child: ValueListenableBuilder<ThemeMode>(
+          valueListenable: themeMode,
+          builder: (context, mode, _) {
+            return MaterialApp(
+              title: AppConstants.appName,
+              theme: AppTheme.lightTheme,
+              darkTheme: AppTheme.darkTheme,
+              themeMode: mode,
+              debugShowCheckedModeBanner: false,
+              home: BlocBuilder<AuthBloc, AuthState>(
+                builder: (context, state) {
+                  if (state is AuthInitial || state is AuthLoading) {
+                    return const Scaffold(
+                      body: Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  }
 
-              if (state is AuthAuthenticated) {
-                return const MainNavigation();
-              }
+                  if (state is AuthAuthenticated) {
+                    return const MainNavigation();
+                  }
 
-              // AuthUnauthenticated or AuthError - show login
-              return const LoginScreen();
-            },
-          ),
+                  return const LoginScreen();
+                },
+              ),
+            );
+          },
         ),
       ),
     );
   }
 }
 
-/// Initialize the application
-/// 
-/// Sets up Hive storage and returns the storage instance for use
-/// in the app widget.
 Future<LocalStorage> initializeApp() async {
-  // Initialize Hive
   await Hive.initFlutter();
 
-  // Open boxes
   await Hive.openBox(AppConstants.jobsBox);
   await Hive.openBox(AppConstants.resumesBox);
   await Hive.openBox(AppConstants.pendingOpsBox);
   await Hive.openBox(AppConstants.settingsBox);
 
-  // Initialize and return storage
+  await loadThemePreference();
+
   return LocalStorage();
 }
